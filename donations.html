@@ -67,17 +67,8 @@ a { color:#e94560; }
 
 <p class="note">Your donations help cover hosting, domain costs, and support continued development of new features. Thank you for your support!</p>
 
-<a href="#" class="back" onclick="history.back()">&larr; Back</a>
-<script>
-if (history.length <= 1) document.querySelector('.back').href = chrome.runtime.getURL('popup.html');
-  document.getElementById('btcAddress').addEventListener('click', function() {
-    navigator.clipboard.writeText('1FTDxfsegMFBeBKcNZhitPPybxeCcRok8a').then(function() {
-      var msg = document.getElementById('copiedMsg');
-      msg.style.display = 'block';
-      setTimeout(function() { msg.style.display = 'none'; }, 2000);
-    });
-  });
-</script>
+<a href="#" class="back">&larr; Back</a>
+<script src="donations.js"></script>
 <p style="margin-top:16px;font-size:13px;color:#888">
   <a href="settings.html">&larr; Back to Settings</a> &bull;
   <a href="privacy.html">Privacy Policy</a>

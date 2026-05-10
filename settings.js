@@ -75,8 +75,34 @@ async function renderFeatures() {
       var enabled = config[f.id] !== false;
       var d = document.createElement('div');
       d.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:none';
-      d.innerHTML = '<div style="display:flex;align-items:center;gap:10px"><div style="width:28px;height:28px;background:' + (f.bg||'#6c757d') + ';border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;flex-shrink:0">' + (f.icon||'?') + '</div><div class="setting-label">' + f.label + ' <small>' + f.desc + '</small></div></div>' +
-        '<label class="switch"><input type="checkbox" id="cfg-' + f.id + '"' + (enabled ? ' checked' : '') + '><span class="slider"></span></label>';
+
+      var leftDiv = document.createElement('div');
+      leftDiv.style.cssText = 'display:flex;align-items:center;gap:10px';
+      var iconBox = document.createElement('div');
+      iconBox.style.cssText = 'width:28px;height:28px;background:' + (f.bg || '#6c757d') + ';border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;flex-shrink:0';
+      iconBox.textContent = f.icon || '?';
+      leftDiv.appendChild(iconBox);
+      var labelDiv = document.createElement('div');
+      labelDiv.className = 'setting-label';
+      labelDiv.textContent = f.label + ' ';
+      var smallDesc = document.createElement('small');
+      smallDesc.textContent = f.desc;
+      labelDiv.appendChild(smallDesc);
+      leftDiv.appendChild(labelDiv);
+      d.appendChild(leftDiv);
+
+      var labelToggle = document.createElement('label');
+      labelToggle.className = 'switch';
+      var checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.id = 'cfg-' + f.id;
+      if (enabled) checkbox.checked = true;
+      labelToggle.appendChild(checkbox);
+      var slider = document.createElement('span');
+      slider.className = 'slider';
+      labelToggle.appendChild(slider);
+      d.appendChild(labelToggle);
+
       grid.appendChild(d);
     });
     el.appendChild(grid);
@@ -668,8 +694,6 @@ async function renderCDNReplacement() {
     var updatedFilesMap = (fs && fs.files) ? fs.files : {};
 
     var libs = [
-      { lib:'jQuery', version:'1.12.4', cdnPath:'ajax/libs/jquery/1.12.4/jquery.min.js' },
-      { lib:'jQuery', version:'2.2.4', cdnPath:'ajax/libs/jquery/2.2.4/jquery.min.js' },
       { lib:'jQuery', version:'3.6.0', cdnPath:'ajax/libs/jquery/3.6.0/jquery.min.js' },
       { lib:'jQuery', version:'3.7.1', cdnPath:'ajax/libs/jquery/3.7.1/jquery.min.js' },
       { lib:'jQuery', version:'3.7.1 (dev)', cdnPath:'ajax/libs/jquery/3.7.1/jquery.js' },

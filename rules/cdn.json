@@ -1,19 +1,13 @@
 [
   {"id":900001,"priority":1,"action":{"type":"redirect","redirect":{"extensionPath":"/resources/jquery-3.7.1.min.js"}},"condition":{"urlFilter":"ajax.googleapis.com/ajax/libs/jquery/3.","resourceTypes":["script"]}},
-  {"id":900002,"priority":1,"action":{"type":"redirect","redirect":{"extensionPath":"/resources/jquery-2.2.4.min.js"}},"condition":{"urlFilter":"ajax.googleapis.com/ajax/libs/jquery/2.","resourceTypes":["script"]}},
-  {"id":900003,"priority":1,"action":{"type":"redirect","redirect":{"extensionPath":"/resources/jquery-1.12.4.min.js"}},"condition":{"urlFilter":"ajax.googleapis.com/ajax/libs/jquery/1.","resourceTypes":["script"]}},
   {"id":900004,"priority":1,"action":{"type":"redirect","redirect":{"extensionPath":"/resources/angular.min.js"}},"condition":{"urlFilter":"ajax.googleapis.com/ajax/libs/angularjs/","resourceTypes":["script"]}},
   {"id":900005,"priority":1,"action":{"type":"redirect","redirect":{"extensionPath":"/resources/modernizr.min.js"}},"condition":{"urlFilter":"ajax.googleapis.com/ajax/libs/modernizr/","resourceTypes":["script"]}},
 
   {"id":900011,"priority":1,"action":{"type":"redirect","redirect":{"extensionPath":"/resources/jquery-3.7.1.min.js"}},"condition":{"urlFilter":"cdnjs.cloudflare.com/ajax/libs/jquery/3.","resourceTypes":["script"]}},
-  {"id":900012,"priority":1,"action":{"type":"redirect","redirect":{"extensionPath":"/resources/jquery-2.2.4.min.js"}},"condition":{"urlFilter":"cdnjs.cloudflare.com/ajax/libs/jquery/2.","resourceTypes":["script"]}},
-  {"id":900013,"priority":1,"action":{"type":"redirect","redirect":{"extensionPath":"/resources/jquery-1.12.4.min.js"}},"condition":{"urlFilter":"cdnjs.cloudflare.com/ajax/libs/jquery/1.","resourceTypes":["script"]}},
   {"id":900014,"priority":1,"action":{"type":"redirect","redirect":{"extensionPath":"/resources/angular.min.js"}},"condition":{"urlFilter":"cdnjs.cloudflare.com/ajax/libs/angular.js/","resourceTypes":["script"]}},
   {"id":900015,"priority":1,"action":{"type":"redirect","redirect":{"extensionPath":"/resources/modernizr.min.js"}},"condition":{"urlFilter":"cdnjs.cloudflare.com/ajax/libs/modernizr/","resourceTypes":["script"]}},
 
   {"id":900021,"priority":1,"action":{"type":"redirect","redirect":{"extensionPath":"/resources/jquery-3.7.1.min.js"}},"condition":{"urlFilter":"code.jquery.com/jquery-3.","resourceTypes":["script"]}},
-  {"id":900022,"priority":1,"action":{"type":"redirect","redirect":{"extensionPath":"/resources/jquery-2.2.4.min.js"}},"condition":{"urlFilter":"code.jquery.com/jquery-2.","resourceTypes":["script"]}},
-  {"id":900023,"priority":1,"action":{"type":"redirect","redirect":{"extensionPath":"/resources/jquery-1.12.4.min.js"}},"condition":{"urlFilter":"code.jquery.com/jquery-1.","resourceTypes":["script"]}},
 
   {"id":900031,"priority":1,"action":{"type":"redirect","redirect":{"extensionPath":"/resources/jquery-3.7.1.min.js"}},"condition":{"urlFilter":"cdn.jsdelivr.net/npm/jquery","resourceTypes":["script"]}},
   {"id":900032,"priority":1,"action":{"type":"redirect","redirect":{"extensionPath":"/resources/angular.min.js"}},"condition":{"urlFilter":"cdn.jsdelivr.net/npm/angular","resourceTypes":["script"]}},

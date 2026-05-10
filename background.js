@@ -1369,7 +1369,7 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
         const selectors = rules[host];
         if (selectors && selectors.length > 0) {
           const css = selectors.map(s => s + '{display:none!important}').join('\n');
-          chrome.tabs.insertCSS(tabId, { code: css, runAt: 'document_start' });
+          chrome.scripting.insertCSS({ target: { tabId }, css: css, origin: 'USER' });
         }
       } catch (e) {}
     } catch (e) {}
@@ -1581,8 +1581,6 @@ async function loadCDNMap() {
 }
 
 const KNOWN_LOCAL_RESOURCES = [
-  { cdnPath: 'ajax/libs/jquery/1.12.4/jquery.min.js',      local: 'resources/lib/jquery/1.12.4/jquery.min.js', lib: 'jQuery', version: '1.12.4' },
-  { cdnPath: 'ajax/libs/jquery/2.2.4/jquery.min.js',      local: 'resources/lib/jquery/2.2.4/jquery.min.js', lib: 'jQuery', version: '2.2.4' },
   { cdnPath: 'ajax/libs/jquery/3.6.0/jquery.min.js',      local: 'resources/lib/jquery/3.6.0/jquery.min.js', lib: 'jQuery', version: '3.6.0' },
   { cdnPath: 'ajax/libs/jquery/3.7.1/jquery.min.js',      local: 'resources/lib/jquery/3.7.1/jquery.min.js', lib: 'jQuery', version: '3.7.1' },
   { cdnPath: 'ajax/libs/jquery/3.7.1/jquery.js',          local: 'resources/lib/jquery/3.7.1/jquery.js', lib: 'jQuery', version: '3.7.1' },

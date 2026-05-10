@@ -430,18 +430,57 @@
       const box = document.createElement('div');
       box.id = 'durgashield-zapper-confirm';
       box.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2147483647;background:#fff;color:#1a1a2e;padding:28px 32px;border-radius:12px;box-shadow:0 8px 40px rgba(0,0,0,0.2);font-family:Arial,sans-serif;min-width:380px;max-width:480px;text-align:left';
-      let infoHtml = '';
-      infoHtml += '<div style="font-size:13px;color:#888;margin-bottom:6px"><strong>&lt;' + elTag + '&gt;</strong></div>';
-      if (elSrc) infoHtml += '<div style="font-size:12px;color:#555;margin-bottom:6px;word-break:break-all">' + elSrc.substring(0, 100) + '</div>';
-      if (elText) infoHtml += '<div style="font-size:12px;color:#555;margin-bottom:6px">"' + elText + '"</div>';
-      box.innerHTML = '<div style="font-size:17px;margin-bottom:12px;font-weight:600;text-align:center">Block this element?</div>' +
-        '<div style="font-size:12px;color:#777;margin-bottom:4px">Selector:</div>' +
-        '<code style="font-size:12px;display:block;overflow:auto;padding:8px 10px;background:#f5f5f5;border:1px solid #ddd;border-radius:6px;margin-bottom:12px;word-break:break-all;">' + selector + '</code>' +
-        infoHtml +
-        '<div style="display:flex;gap:12px;justify-content:center;margin-top:16px">' +
-        '<button id="dgs-confirm-block" style="padding:10px 32px;background:#dc3545;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:15px;font-weight:600">Block</button>' +
-        '<button id="dgs-cancel-block" style="padding:10px 32px;background:#6c757d;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:15px;font-weight:600">Cancel</button>' +
-        '</div>';
+
+      const titleEl = document.createElement('div');
+      titleEl.style.cssText = 'font-size:17px;margin-bottom:12px;font-weight:600;text-align:center';
+      titleEl.textContent = 'Block this element?';
+      box.appendChild(titleEl);
+
+      const selLabel = document.createElement('div');
+      selLabel.style.cssText = 'font-size:12px;color:#777;margin-bottom:4px';
+      selLabel.textContent = 'Selector:';
+      box.appendChild(selLabel);
+
+      const selCode = document.createElement('code');
+      selCode.style.cssText = 'font-size:12px;display:block;overflow:auto;padding:8px 10px;background:#f5f5f5;border:1px solid #ddd;border-radius:6px;margin-bottom:12px;word-break:break-all';
+      selCode.textContent = selector;
+      box.appendChild(selCode);
+
+      const tagInfo = document.createElement('div');
+      tagInfo.style.cssText = 'font-size:13px;color:#888;margin-bottom:6px';
+      tagInfo.textContent = '<' + elTag + '>';
+      box.appendChild(tagInfo);
+
+      if (elSrc) {
+        const srcInfo = document.createElement('div');
+        srcInfo.style.cssText = 'font-size:12px;color:#555;margin-bottom:6px;word-break:break-all';
+        srcInfo.textContent = elSrc.substring(0, 100);
+        box.appendChild(srcInfo);
+      }
+
+      if (elText) {
+        const textInfo = document.createElement('div');
+        textInfo.style.cssText = 'font-size:12px;color:#555;margin-bottom:6px';
+        textInfo.textContent = '"' + elText + '"';
+        box.appendChild(textInfo);
+      }
+
+      const btnWrap = document.createElement('div');
+      btnWrap.style.cssText = 'display:flex;gap:12px;justify-content:center;margin-top:16px';
+
+      const btnBlock = document.createElement('button');
+      btnBlock.id = 'dgs-confirm-block';
+      btnBlock.style.cssText = 'padding:10px 32px;background:#dc3545;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:15px;font-weight:600';
+      btnBlock.textContent = 'Block';
+
+      const btnCancel = document.createElement('button');
+      btnCancel.id = 'dgs-cancel-block';
+      btnCancel.style.cssText = 'padding:10px 32px;background:#6c757d;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:15px;font-weight:600';
+      btnCancel.textContent = 'Cancel';
+
+      btnWrap.appendChild(btnBlock);
+      btnWrap.appendChild(btnCancel);
+      box.appendChild(btnWrap);
       document.body.appendChild(box);
       document.getElementById('dgs-confirm-block').onclick = function() {
         commitBlock(selector);
@@ -906,7 +945,14 @@
         var banner = document.createElement('div');
         banner.id = 'ds-yt-whitelist-banner';
         banner.style.cssText = 'position:fixed;top:60px;right:12px;z-index:9999;background:#16213e;border:1px solid #e94560;border-radius:6px;padding:6px 12px;font-family:Arial,sans-serif;font-size:11px;color:#ccc;display:flex;align-items:center;gap:8px';
-        banner.innerHTML = '<span>\u2713 Ads allowed on <strong>' + ytChannelName + '</strong></span><button id="ds-yt-unwhitelist" style="background:#333;color:#ccc;border:none;border-radius:3px;padding:2px 8px;cursor:pointer;font-size:10px">Undo</button>';
+        var bannerText = document.createElement('span');
+        bannerText.textContent = '\u2713 Ads allowed on ' + ytChannelName;
+        banner.appendChild(bannerText);
+        var undoBtn = document.createElement('button');
+        undoBtn.id = 'ds-yt-unwhitelist';
+        undoBtn.style.cssText = 'background:#333;color:#ccc;border:none;border-radius:3px;padding:2px 8px;cursor:pointer;font-size:10px';
+        undoBtn.textContent = 'Undo';
+        banner.appendChild(undoBtn);
         document.body.appendChild(banner);
         document.getElementById('ds-yt-unwhitelist').onclick = function() {
           chrome.runtime.sendMessage({ type:'removeYouTubeWhitelist', channelId: ytChannelId });

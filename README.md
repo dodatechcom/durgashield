@@ -326,7 +326,7 @@ For permanent installation, sign the extension at [addons.mozilla.org](https://a
 
 ## Requirements
 
-- Firefox 102.0 or later
+- Firefox 113.0 or later
 - Manifest V3
 
 ## Permissions

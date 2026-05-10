@@ -11,13 +11,13 @@
     "unlimitedStorage",
     "notifications",
     "tabs",
-    "contextualIdentities"
+    "contextualIdentities",
+    "scripting"
   ],
   "optional_permissions": [
     "cookies",
     "downloads",
-    "webNavigation",
-    "scripting"
+    "webNavigation"
   ],
   "host_permissions": ["<all_urls>"],
   "declarative_net_request": {
@@ -101,13 +101,13 @@
   },
   "options_ui": {
     "page": "settings.html",
-    "browser_style": true,
     "open_in_tab": true
   },
   "browser_specific_settings": {
     "gecko": {
       "id": "durgashield@security.extension",
-      "strict_min_version": "102.0"
+      "strict_min_version": "113.0",
+      "data_collection_permissions": false
     }
   }
 }

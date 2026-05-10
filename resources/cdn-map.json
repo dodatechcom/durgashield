@@ -1,8 +1,8 @@
 [
   {
     "host": "ajax.googleapis.com",
-    "pathPattern": "^/ajax/libs/jquery/([^/]+)/(jquery[^/]*)$",
-    "localTemplate": "lib/jquery/$1/$2"
+    "pathPattern": "^/ajax/libs/jquery/3\\.([^/]+)/(jquery[^/]*)$",
+    "localTemplate": "lib/jquery/3.$1/$2"
   },
   {
     "host": "ajax.googleapis.com",
@@ -11,8 +11,8 @@
   },
   {
     "host": "cdnjs.cloudflare.com",
-    "pathPattern": "^/ajax/libs/jquery/([^/]+)/(jquery[^/]*)$",
-    "localTemplate": "lib/jquery/$1/$2"
+    "pathPattern": "^/ajax/libs/jquery/3\\.([^/]+)/(jquery[^/]*)$",
+    "localTemplate": "lib/jquery/3.$1/$2"
   },
   {
     "host": "cdnjs.cloudflare.com",
@@ -76,8 +76,8 @@
   },
   {
     "host": "cdn.jsdelivr.net",
-    "pathPattern": "^/npm/jquery@([^/]+)/dist/(jquery[^/]*)$",
-    "localTemplate": "lib/jquery/$1/$2"
+    "pathPattern": "^/npm/jquery@3/dist/(jquery[^/]*)$",
+    "localTemplate": "lib/jquery/3.7.1/$1"
   },
   {
     "host": "cdn.jsdelivr.net",
@@ -151,13 +151,13 @@
   },
   {
     "host": "ajax.aspnetcdn.com",
-    "pathPattern": "^/ajax/(jquery)/([^/]+)/(jquery[^/]*)$",
-    "localTemplate": "lib/$1/$2/$3"
+    "pathPattern": "^/ajax/(jquery)/3\\.([^/]+)/(jquery[^/]*)$",
+    "localTemplate": "lib/$1/3.$2/$3"
   },
   {
     "host": "yastatic.net",
-    "pathPattern": "^/(jquery)/([^/]+)/(jquery[^/]*)$",
-    "localTemplate": "lib/$1/$2/$3"
+    "pathPattern": "^/(jquery)/3\\.([^/]+)/(jquery[^/]*)$",
+    "localTemplate": "lib/$1/3.$2/$3"
   },
   {
     "host": "yastatic.net",
