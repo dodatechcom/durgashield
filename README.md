@@ -2,6 +2,18 @@
 
 A comprehensive Firefox security extension using Manifest V3. Blocks ads, popups, crypto miners, malware, phishing sites, and cookie consent popups. Includes filter lists, element zapper, heuristic tracker detection, GPC/DNT headers, CDN resource localization, stealth mode, anti-fingerprinting, Never-Consent, enhanced anti-tracking, XSS protection, ClearClick anti-clickjacking, ABE local network protection, 200+ tracking parameter stripping, YouTube annoyance cleanup, mixed content blocking, download malware scanning, and isolates social media activity into a dedicated container.
 
+<h2>Why Choose DurgaShield?</h2>
+
+| | |
+|---|---|
+| **Comprehensive** | 30+ features in one extension |
+| **Privacy-focused** | No tracking, no data collection |
+| **Open source** | Fully transparent codebase |
+| **All-in-one** | Replaces 8–10 separate extensions |
+| **Active development** | Regular updates with new features |
+| **Well-maintained** | Timely security patches |
+| **User-friendly** | Clean, intuitive interface |
+
 ## Features
 
 ### CDN Resource Localization (Decentraleyes-style)
