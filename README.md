@@ -1,6 +1,6 @@
 # DurgaShield
 
-A comprehensive Firefox security extension using Manifest V3. Combines features from uBlock Origin (filter lists, element zapper), Privacy Badger (heuristic tracker detection, GPC/DNT headers), Decentraleyes (CDN resource localization), AdGuard (stealth mode, anti-fingerprinting), Ghostery (Never-Consent, enhanced anti-tracking), NoScript (XSS protection, ClearClick anti-clickjacking, ABE local network protection), ClearURLs (200+ tracking parameter stripping), SponsorBlock (YouTube annoyance cleanup), HTTPS Everywhere (mixed content blocking), and download malware scanning. Blocks ads, popups, crypto miners, malware, phishing sites, cookie consent popups, and isolates social media activity into a dedicated container.
+A comprehensive Firefox security extension using Manifest V3. Blocks ads, popups, crypto miners, malware, phishing sites, and cookie consent popups. Includes filter lists, element zapper, heuristic tracker detection, GPC/DNT headers, CDN resource localization, stealth mode, anti-fingerprinting, Never-Consent, enhanced anti-tracking, XSS protection, ClearClick anti-clickjacking, ABE local network protection, 200+ tracking parameter stripping, YouTube annoyance cleanup, mixed content blocking, download malware scanning, and isolates social media activity into a dedicated container.
 
 ## Features
 

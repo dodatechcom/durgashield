@@ -4,3 +4,4 @@ node_modules/
 .env
 opencode.tar.gz
 durgamaa.svg
+git-push.sh
