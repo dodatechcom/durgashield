@@ -829,8 +829,16 @@
         const rect = iframe.getBoundingClientRect();
         if (rect.top < 60 && rect.width > window.innerWidth * 0.5) {
           const w = document.createElement('div');
-          w.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:2147483646;background:#fff3cd;color:#856404;padding:8px 16px;font-family:Arial,sans-serif;font-size:12px;text-align:center;border-bottom:2px solid #ffc107';
-          w.textContent = 'DurgaShield: Suspicious overlay detected on this page.';
+          w.id = 'durgashield-overlay-warning';
+          w.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:2147483646;background:#fff3cd;color:#856404;padding:8px 16px;font-family:Arial,sans-serif;font-size:12px;text-align:center;border-bottom:2px solid #ffc107;display:flex;align-items:center;justify-content:center;gap:12px';
+          var warnText = document.createElement('span');
+          warnText.textContent = 'DurgaShield: Suspicious overlay detected on this page.';
+          w.appendChild(warnText);
+          var dismissBtn = document.createElement('button');
+          dismissBtn.textContent = 'Dismiss';
+          dismissBtn.style.cssText = 'background:#856404;color:#fff;border:none;border-radius:3px;padding:3px 10px;cursor:pointer;font-size:11px;font-weight:600';
+          dismissBtn.onclick = function() { w.remove(); };
+          w.appendChild(dismissBtn);
           document.body.prepend(w);
           return true;
         }
@@ -1587,12 +1595,17 @@
       if (clearClickOverlays.has(overlay)) {
         e.preventDefault();
         e.stopPropagation();
-        const confirmed = confirm('DurgaShield ClearClick: This click was intercepted by a transparent overlay.\n\nThis could be a clickjacking attempt. Allow the click anyway?\n\nElement: ' + (overlay.tagName || '') + (overlay.id ? '#' + overlay.id : ''));
+        var tagInfo = (overlay.tagName || '') + (overlay.id ? '#' + overlay.id : '');
+        var confirmed = confirm('DurgaShield ClearClick: This click was intercepted by a transparent overlay.\n\nThis could be a clickjacking attempt. Allow the click anyway?\n\nElement: ' + tagInfo + '\n\n- Click OK to allow the click through.\n- Click Cancel to dismiss this warning (overlay stays blocked).');
         if (confirmed) {
           overlay.dataset._sfClearClicked = '1';
           clearClickOverlays.delete(overlay);
           overlay.style.outline = '';
           target.click();
+        } else {
+          overlay.dataset._sfClearClicked = '1';
+          clearClickOverlays.delete(overlay);
+          overlay.style.outline = '';
         }
         return;
       }
