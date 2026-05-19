@@ -291,7 +291,7 @@ A comprehensive Firefox security extension using Manifest V3. Blocks ads, popups
 
 | Ruleset | Rule IDs | Rules | Purpose |
 |---|---|---|---|---|---|
-| `ads.json` (static) | 1001-1294 | 294 | Ad networks, trackers, social pixels, analytics |
+| `ads.json` (static) | 1001-1288 | 288 | Ad networks, trackers, social pixels, analytics |
 | `malware.json` (static) | 100000-100132 | 133 | Malware domains, ransomware, scams |
 | `crypto.json` (static) | 200001-200124 | 124 | Crypto miners, mining pools |
 | `phishing.json` (static) | 300001-300172 | 172 | Phishing domains, fake login pages |
@@ -411,6 +411,11 @@ Keep README.md updated when adding or modifying features.
 MIT
 
 ## Changelog
+
+### v1.0.3 — Broad DNR pattern cleanup, ClearClick opt-in (2026-05-19)
+- **DNR broad pattern removal**: Removed 6 overly broad substring rules (`analytics.`, `tracking.`, `/ads/`, `/banner/`, `/sponsor/`, `/promo/`) that blocked first-party resources on arbitrary sites — generic substring filters in Firefox DNR lack `third-party` domain matching, causing false-positive blocking on sites that serve scripts/images from `/ads/` paths or use `analytics.`/`tracking.` subdomains internally
+- **ClearClick made opt-in**: Overlay detection caused false positives on sites with sticky headers/ad containers, breaking all link clicks — now only activates when explicitly enabled via toggle
+- **Opt-in defaults aligned**: `background.js` `DEFAULT_CONFIG` updated to match `content.js` defaults (`stealth: false`, `enhancedTracking: false`, `xssProtection: false`, `clearClick: false`) for consistent behavior across all contexts
 
 ### v1.0.2 — Crypto site compatibility fixes (2026-05-19)
 - **`detectCryptoMining()` pattern narrowing**: Removed broad patterns (`miner`, `mining`, `monero`, `hashrate`, `stratum`, `cryptonight`) that matched common crypto terms in legitimate scripts — kept only specific miner identifiers (`coinhive`, `cryptoloot`, `webminer`, `webmine`)
