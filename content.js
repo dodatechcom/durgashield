@@ -1991,7 +1991,7 @@
     var trustedTLDs = ['.gov', '.edu', '.org'];
     var unsafeKeywords = ['free', 'win', 'prize', 'lottery', 'casino', 'bonus', 'click-here', 'download-now'];
     var style = document.createElement('style');
-    style.textContent = '.dgs-annotation{display:inline-block!important;font-size:9px!important;margin-left:5px!important;padding:2px 6px!important;border-radius:4px!important;font-weight:700!important;line-height:1.5!important;position:relative!important;z-index:9999!important;vertical-align:middle!important;letter-spacing:0.3px!important}.dgs-annotation-safe{background:#28a745!important;color:#fff!important;border:1px solid #1e7e34!important}.dgs-annotation-unsafe{background:#dc3545!important;color:#fff!important;border:1px solid #bd2130!important}';
+    style.textContent = '.dgs-annotation{display:inline-block!important;font-size:9px!important;margin-left:5px!important;padding:2px 6px!important;border-radius:4px!important;font-weight:700!important;line-height:1.5!important;position:relative!important;z-index:9999!important;vertical-align:middle!important;letter-spacing:0.3px!important;transform:none!important;rotate:none!important}.dgs-annotation-safe{background:#28a745!important;color:#fff!important;border:1px solid #1e7e34!important}.dgs-annotation-unsafe{background:#dc3545!important;color:#fff!important;border:1px solid #bd2130!important}';
     (document.head || document.documentElement).appendChild(style);
     function absoluteURL(raw) {
       if (!raw) return '';
