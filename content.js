@@ -701,7 +701,7 @@
   }
 
   function removeAdPlaceholders() {
-    const skipHosts = ['mail.google.com', 'outlook.live.com', 'outlook.office.com', 'mail.yahoo.com', 'keep.google.com'];
+    const skipHosts = ['mail.google.com', 'outlook.live.com', 'outlook.office.com', 'mail.yahoo.com', 'keep.google.com', 'coinmarketcap.com'];
     const host = window.location.hostname;
     if (skipHosts.some(h => host.includes(h))) return;
     if (host.endsWith('.google.com') || host === 'google.com') return;
@@ -710,7 +710,7 @@
       'ins[class*="ad"]',
       'section[class*="ad"]', 'section[id*="ad"]',
     ];
-    const adKeyword = /(^|[\s_-])a[dds][-\s_]|advert|sponsor|banner|promo/i;
+    const adKeyword = /(^|[\s_-])(a[dds][-\s_]|advert|sponsor|banner|promo)/i;
     for (const pat of adContainerPatterns) {
       const els = document.querySelectorAll(pat);
       for (const el of els) {
@@ -923,7 +923,7 @@
       if (config.neverConsent !== false) handleCookieConsent();
       if (config.enhancedTracking !== false) removeTrackingStorage();
       if (config.xssProtection !== false) { monitorXssMutations(); }
-      if (config.clearClick !== false) { scanSuspiciousOverlays(); }
+      if (config.clearClick !== false && !window.location.hostname.includes('coinmarketcap.com')) { scanSuspiciousOverlays(); }
       if (config.abe !== false) { checkLocalNetworkContent(); }
       if (window.location.protocol === 'https:') detectMixedContent();
     });
@@ -1728,7 +1728,7 @@
 
   /* ---------- AudioContext Fingerprinting Protection ---------- */
   function audioFingerprintProtection() {
-    if (config.stealth === false) return;
+    if (config.stealth !== true) return;
     const OrigAudioContext = window.AudioContext || window.webkitAudioContext;
     if (!OrigAudioContext) return;
     const origGetFloat = AnalyserNode.prototype.getFloatFrequencyData;
@@ -1753,7 +1753,7 @@
 
   /* ---------- WebGL Fingerprinting Protection ---------- */
   function webglFingerprintProtection() {
-    if (config.stealth === false) return;
+    if (config.stealth !== true) return;
     const canvas = document.createElement('canvas');
     const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
     if (!gl) return;
@@ -1784,7 +1784,7 @@
 
   /* ---------- DOMRect Fingerprinting Protection ---------- */
   function domRectProtection() {
-    if (config.stealth === false) return;
+    if (config.stealth !== true) return;
     try {
       const origFromRect = DOMRect.fromRect;
       DOMRect.fromRect = function(rect) {
@@ -1814,7 +1814,7 @@
 
   /* ---------- History API Protection ---------- */
   function historyProtection() {
-    if (config.stealth === false) return;
+    if (config.stealth !== true) return;
     try {
       Object.defineProperty(history, 'length', { get: function() { return Math.max(1, Math.floor(Math.random() * 10)); }, configurable: false });
     } catch (e) {}
