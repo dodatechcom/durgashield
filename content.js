@@ -689,7 +689,7 @@
     const selectors = ['ins.adsbygoogle', 'div[data-ad]', 'div[data-ad-unit]', 'amp-ad', 'google-ad', 'iframe[src*="doubleclick.net"]', 'iframe[src*="googlesyndication.com"]'];
     let count = 0;
     const elements = document.querySelectorAll(selectors.join(','));
-    for (const el of elements) { el.remove(); count++; }
+    for (const el of elements) { el.style.setProperty('display', 'none', 'important'); count++; }
     if (count > 0) { queueBlockCount(count); removeAdPlaceholders(); }
     bypassAntiAdblock();
   }
@@ -770,7 +770,7 @@
         const text = (el.textContent || '').toLowerCase();
         if (text.includes('disable') || text.includes('adblock') || text.includes('whitelist') ||
             text.includes('ad blocker') || text.includes('turn off') || text.includes('please')) {
-          el.remove();
+          el.style.setProperty('display', 'none', 'important');
           queueBlockCount(1);
         }
       }
