@@ -715,7 +715,7 @@
       const els = document.querySelectorAll(pat);
       for (const el of els) {
         if (el.offsetParent === null) continue;
-        if (el.tagName === 'SCRIPT' || el.tagName === 'STYLE') continue;
+        if (el.tagName === 'SCRIPT' || el.tagName === 'STYLE' || el.tagName === 'CANVAS' || el.tagName === 'SVG') continue;
         if (isSafeElement(el)) continue;
         if (el.querySelector('input, textarea, [role="checkbox"], [role="button"], [role="textbox"], [role="switch"], [role="radio"]')) continue;
         const cls = (el.className || '') + ' ' + (el.id || '');
@@ -728,7 +728,11 @@
         const hasBigImage = Array.from(imgs).some(img => img.naturalWidth > 50 || img.offsetWidth > 50);
         const iframes = el.querySelectorAll('iframe');
         const hasFilledIframe = Array.from(iframes).some(f => f.offsetWidth > 50 && f.offsetHeight > 50);
-        if (!hasBigImage && !hasFilledIframe) {
+        const canvases = el.querySelectorAll('canvas');
+        const hasCanvas = Array.from(canvases).some(c => c.offsetWidth > 50 && c.offsetHeight > 50);
+        const svgs = el.querySelectorAll('svg');
+        const hasSvg = Array.from(svgs).some(s => s.offsetWidth > 50 && s.offsetHeight > 50);
+        if (!hasBigImage && !hasFilledIframe && !hasCanvas && !hasSvg) {
           collapseElement(el);
         }
       }
