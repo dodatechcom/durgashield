@@ -702,7 +702,7 @@
   }
 
   function removeAdPlaceholders() {
-    const skipHosts = ['mail.google.com', 'outlook.live.com', 'outlook.office.com', 'mail.yahoo.com', 'keep.google.com', 'coinmarketcap.com', 'bitget.com', 'coingecko.com'];
+    const skipHosts = ['mail.google.com', 'outlook.live.com', 'outlook.office.com', 'mail.yahoo.com', 'keep.google.com', 'coinmarketcap.com', 'bitget.com', 'coingecko.com', 'tvsmotor.com'];
     const host = window.location.hostname;
     if (skipHosts.some(h => host.includes(h))) return;
     if (host.endsWith('.google.com') || host === 'google.com') return;

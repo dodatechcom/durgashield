@@ -1533,7 +1533,8 @@ const ALLOWED_SITES = [
   { domain: 'githubstatus.com', desc: 'GitHub status' },
   { domain: 'coinmarketcap.com', desc: 'CoinMarketCap' },
   { domain: 'bitget.com', desc: 'BitGet' },
-  { domain: 'coingecko.com', desc: 'CoinGecko' }
+  { domain: 'coingecko.com', desc: 'CoinGecko' },
+  { domain: 'tvsmotor.com', desc: 'TVS Motor' }
 ];
 function buildSiteAllowRules() {
   return ALLOWED_SITES.flatMap((site, i) => [
