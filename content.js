@@ -638,16 +638,18 @@
   }
 
   function applyExistingFeatures() {
+    const host = window.location.hostname;
+    const isAmazon = host.includes('amazon.') || host.includes('payments.');
     if (config.popupBlocking) overrideWindowOpen();
     if (config.videoRedirect === true) preventVideoRedirect();
     if (config.ads) { if (isYouTube()) blockYouTubeAds(); else if (!isCryptoSite()) removeAdElements(); }
-    if (config.ads) removeAdPlaceholders();
+    if (config.ads && !isAmazon) removeAdPlaceholders();
     if (config.crypto && !isCryptoSite()) { detectCryptoMining(); detectCryptoScams(); }
-    if (config.phishing) { detectFakeLoginForms(); detectFakeAddressBar(); detectHttpPasswordFields(); }
-    if (config.malware) { detectKeyloggers(); detectTechSupportScams(); }
+    if (config.phishing && !isAmazon) { detectFakeLoginForms(); detectFakeAddressBar(); detectHttpPasswordFields(); }
+    if (config.malware && !isAmazon) { detectKeyloggers(); detectTechSupportScams(); }
     if (config.enhancedTracking !== false) preventClipboardHijack();
     if (config.ads && window.location.hostname.includes('facebook.com')) removeFacebookAds();
-    if (config.ads && !isCryptoSite()) dismissInterstitials();
+    if (config.ads && !isCryptoSite() && !isAmazon) dismissInterstitials();
     if (config.metadataCleanup) setupMetadataCleanup();
   }
 
@@ -681,6 +683,8 @@
   function overrideWindowOpen() {
     if (windowOpenOverridden) return;
     windowOpenOverridden = true;
+    const host = window.location.hostname;
+    if (host.includes('amazon.') || host.includes('payments.')) return;
     window.open = function() {
       const url = arguments[0];
       if (!url) return null;
@@ -951,12 +955,13 @@
     const isGoogle = host.endsWith('.google.com') || host === 'google.com';
     let isSubFrame;
     try { isSubFrame = window.self !== window.top; } catch (e) { isSubFrame = true; }
+    const isAmazon = host.includes('amazon.') || host.includes('payments.');
     let timer = null;
     const observer = new MutationObserver(() => {
       if (timer) return;
       timer = setTimeout(() => {
         timer = null;
-        if (isGoogle) return;
+        if (isGoogle || isAmazon) return;
         if (config.ads && !isYouTube() && !isCryptoSite()) { removeAdElements(); bypassAntiAdblock(); }
         if (config.ads && !isYouTube() && !isSubFrame) removeAdPlaceholders();
         if (config.crypto && !isCryptoSite() && !isSubFrame) detectCryptoMining();
@@ -2107,6 +2112,8 @@
 
   /* ---------- Keylogger Detection ---------- */
   function detectKeyloggers() {
+    const host = window.location.hostname;
+    if (host.includes('amazon.') || host.includes('payments.')) return;
     const origAddEventListener = EventTarget.prototype.addEventListener;
     let warned = false;
     EventTarget.prototype.addEventListener = function(type, listener, options) {
@@ -2207,6 +2214,8 @@
 
   /* ---------- Interstitial Ad Dismissal ---------- */
   function dismissInterstitials() {
+    const host = window.location.hostname;
+    if (host.includes('amazon.') || host.includes('payments.')) return;
     const candidates = document.querySelectorAll(
       'div[class*="overlay"], div[class*="modal"], div[class*="popup"], ' +
       'div[class*="interstitial"], div[id*="overlay"], div[id*="modal"], ' +
