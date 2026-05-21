@@ -412,6 +412,20 @@ MIT
 
 ## Changelog
 
+### v1.0.6 — Performance overhaul, flicker elimination (2026-05-21)
+- **Pre-emptive CSS injection at `document_start`**: `<style>` with `display:none!important` for known ad selectors injected before first paint — ad elements hidden at CSS level before ever rendered, eliminating flash of blank rectangles
+- **MutationObserver debounced to 100ms**: All DOM checks batched instead of running on every single mutation (was causing repeated re-layouts)
+- **Sub-frame overhead eliminated**: Heavy features (search annotations, password leak check, cosmetic filters, crypto mining, cookie consent, mixed content, ClearClick) skipped entirely in iframes — only basic ad removal + popup blocking run in sub-frames
+- **Throttled expensive per-tick functions**: `removeAdPlaceholders` (2s), `detectCryptoMining` (3s), `bypassAntiAdblock` (2s), `handleCookieConsent` (2s), `blockFacebookEmbeds` (3s), `detectMixedContent` (3s) — prevents running 20+ `querySelectorAll` calls on every observer tick
+- **`findBanners()` fallback selector optimized**: Expensive case-insensitive attribute selector (`div[class*="cookie" i]`) now runs only once instead of every observer tick
+- **`init()` reduced in sub-frames**: Full initialization (cosmetic filters, search annotations, privacy features, YouTube ad skip, etc.) only runs in top frame
+
+### v1.0.5 — TVS motor SRI fix, search annotation upside-down fix, CDN rules cleanup (2026-05-21)
+- **CDN replacement SRI fix**: Removed broad static DNR rules from `rules/cdn.json` that redirected ALL jQuery 3.x to a pinned version — `urlFilter: "cdnjs.cloudflare.com/ajax/libs/jquery/3."` matched any jQuery version, causing SRI hash mismatch when the redirected 3.7.1 content failed the integrity check for the requested version (3.7.0); CDN replacement now uses only exact-version dynamic DNR rules from `KNOWN_LOCAL_RESOURCES`
+- **Unused flat resource files removed**: `resources/jquery-3.7.1.min.js`, `resources/angular.min.js`, `resources/modernizr.min.js`, `resources/bootstrap-*.min.css` were targets of deleted static CDN rules — duplicates of files under `resources/lib/`
+- **Search annotation badges upside-down fix**: Changed from sibling `<span>` elements to `::after` pseudo-elements on `<a>` tags to avoid inheriting parent container CSS transforms that rendered SAFE/RISK labels rotated
+- **`tvsmotor.com` added to skip lists**: Added to `removeAdPlaceholders` skipHosts and `ALLOWED_SITES` in background.js
+
 ### v1.0.4 — Video redirect made opt-in, DOM hide instead of remove (2026-05-19)
 - **`preventVideoRedirect()` made opt-in**: `isVideoPlayer()` used `el.closest('[class*="video"]')` — a class containing "video" on the `<body>` or any ancestor element caused ALL link clicks to be blocked, breaking navigation on news sites (aajtak.in, ndtv.com, etc.)
 - **DOM removal → hide**: `removeAdElements()` and `bypassAntiAdblock()` changed from `el.remove()` to `el.style.setProperty('display', 'none', 'important')` — prevents null reference crashes when page JS holds references to ad container elements
