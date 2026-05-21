@@ -6,6 +6,12 @@
   let zapperActive = false;
   let jsBlocked = false;
 
+  /* Pre-emptive CSS: hide known ad elements before first paint */
+  const hideStyle = document.createElement('style');
+  hideStyle.id = 'dgs-instant-hide';
+  hideStyle.textContent = 'ins.adsbygoogle,div[data-ad],div[data-ad-unit],amp-ad,google-ad,iframe[src*="doubleclick.net"],iframe[src*="googlesyndication.com"],.adsbygoogle[data-ad-status="unfilled"]{display:none!important}';
+  document.documentElement.appendChild(hideStyle);
+
   /* ---------- uBlock-style Scriptlets (anti-adblock bypass) ---------- */
   const scriptlets = {};
 
@@ -266,6 +272,10 @@
   chrome.runtime.onMessage.addListener((msg) => {
     if (msg.type === 'configUpdated') {
       Object.assign(config, msg.config);
+      if (!config.ads) {
+        const s = document.getElementById('dgs-instant-hide');
+        if (s) s.remove();
+      }
       if (isFacebookOrigin()) {
         const bar = document.getElementById('durgashield-container-bar');
         if (bar) { bar.remove(); document.documentElement.style.marginTop = ''; }
@@ -296,6 +306,10 @@
     const isGoogle = host.endsWith('.google.com') || host === 'google.com';
     let isSubFrame;
     try { isSubFrame = window.self !== window.top; } catch (e) { isSubFrame = true; }
+    if (!config.ads) {
+      const s = document.getElementById('dgs-instant-hide');
+      if (s) s.remove();
+    }
     applyCustomHideRules();
     if (!isSubFrame) {
       if (!isGoogle) loadCosmeticFilters();
@@ -953,7 +967,7 @@
         if (config.clearClick === true && !isCryptoSite() && !isSubFrame) { scanSuspiciousOverlays(); }
         if (config.abe !== false) { checkLocalNetworkContent(); }
         if (window.location.protocol === 'https:' && !isSubFrame) detectMixedContent();
-      }, 150);
+      }, 100);
     });
     observer.observe(target, { childList: true, subtree: true });
   }
