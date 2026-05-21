@@ -9,7 +9,7 @@
   /* Pre-emptive CSS: hide known ad elements before first paint */
   const hideStyle = document.createElement('style');
   hideStyle.id = 'dgs-instant-hide';
-  hideStyle.textContent = 'ins.adsbygoogle,div[data-ad],div[data-ad-unit],amp-ad,google-ad,iframe[src*="doubleclick.net"],iframe[src*="googlesyndication.com"],.adsbygoogle[data-ad-status="unfilled"]{display:none!important}';
+  hideStyle.textContent = 'ins.adsbygoogle,amp-ad,google-ad,iframe[src*="doubleclick.net"],iframe[src*="googlesyndication.com"],.adsbygoogle[data-ad-status="unfilled"]{display:none!important}';
   document.documentElement.appendChild(hideStyle);
 
   /* ---------- uBlock-style Scriptlets (anti-adblock bypass) ---------- */
@@ -714,7 +714,7 @@
   }
 
   function removeAdElements() {
-    const selectors = ['ins.adsbygoogle', 'div[data-ad]', 'div[data-ad-unit]', 'amp-ad', 'google-ad', 'iframe[src*="doubleclick.net"]', 'iframe[src*="googlesyndication.com"]'];
+    const selectors = ['ins.adsbygoogle', 'amp-ad', 'google-ad', 'iframe[src*="doubleclick.net"]', 'iframe[src*="googlesyndication.com"]'];
     let count = 0;
     const elements = document.querySelectorAll(selectors.join(','));
     for (const el of elements) { el.style.setProperty('display', 'none', 'important'); count++; }
