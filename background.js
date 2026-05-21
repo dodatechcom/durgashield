@@ -1534,7 +1534,9 @@ const ALLOWED_SITES = [
   { domain: 'coinmarketcap.com', desc: 'CoinMarketCap' },
   { domain: 'bitget.com', desc: 'BitGet' },
   { domain: 'coingecko.com', desc: 'CoinGecko' },
-  { domain: 'tvsmotor.com', desc: 'TVS Motor' }
+  { domain: 'tvsmotor.com', desc: 'TVS Motor' },
+  { domain: 'amazon.in', desc: 'Amazon India' },
+  { domain: 'amazon.com', desc: 'Amazon US' }
 ];
 function buildSiteAllowRules() {
   return ALLOWED_SITES.flatMap((site, i) => [
