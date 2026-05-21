@@ -688,7 +688,7 @@
         const parsed = new URL(url, window.location.href);
         const hostname = parsed.hostname.toLowerCase();
         if (['ad', 'ads', 'banner', 'popup', 'pop-up', 'popunder', 'sponsor', 'promo', 'offer', 'win', 'prize', 'gift', 'click', 'track', 'tracking', 'affiliate', 'redirect'].some(k => hostname.includes(k))) { queueBlockCount(1); return null; }
-        if ([/\/ads?\//i, /\/(ad|banner|popup|track)/i, /\/click?\//i, /\/(redirect|offer)/i].some(p => p.test(parsed.pathname) || p.test(parsed.search))) { queueBlockCount(1); return null; }
+        if ([/\/ads?\//i, /\/(ads[-_.\/]|banner[-_.\/]|popup[-_.\/]|track[-_.\/])/i, /\/click?\//i, /\/(redirect|offer)[-_.\/]/i].some(p => p.test(parsed.pathname) || p.test(parsed.search))) { queueBlockCount(1); return null; }
       } catch (e) {}
       try { return originalOpen.apply(window, arguments); } catch (e) { return null; }
     };
