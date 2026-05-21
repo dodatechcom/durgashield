@@ -294,17 +294,24 @@
   function init() {
     const host = hostname();
     const isGoogle = host.endsWith('.google.com') || host === 'google.com';
+    let isSubFrame;
+    try { isSubFrame = window.self !== window.top; } catch (e) { isSubFrame = true; }
     applyCustomHideRules();
-    if (!isGoogle) loadCosmeticFilters();
-    if (isIsolatedPage() && config.containerIsolation) showContainerIndicator();
-    if (!isFacebookOrigin()) blockFacebookEmbeds();
-    if (!isGoogle) applyExistingFeatures();
-    if (config.searchAnnotations) setupSearchAnnotations();
-    if (config.passwordLeakCheck !== false) setupPasswordLeakCheck();
+    if (!isSubFrame) {
+      if (!isGoogle) loadCosmeticFilters();
+      if (isIsolatedPage() && config.containerIsolation) showContainerIndicator();
+      if (!isFacebookOrigin()) blockFacebookEmbeds();
+      if (!isGoogle) applyExistingFeatures();
+      if (config.searchAnnotations) setupSearchAnnotations();
+      if (config.passwordLeakCheck !== false) setupPasswordLeakCheck();
+      if (isYouTube() && config.ads) startYouTubeAdSkip();
+      if (isYouTube()) { detectYouTubeChannel(); setTimeout(checkYouTubeWhitelist, 2000); }
+      if (!isGoogle) initPrivacyFeatures();
+    } else {
+      if (config.popupBlocking) overrideWindowOpen();
+      if (config.ads && !isYouTube()) removeAdElements();
+    }
     startObserver();
-    if (isYouTube() && config.ads) startYouTubeAdSkip();
-    if (isYouTube()) { detectYouTubeChannel(); setTimeout(checkYouTubeWhitelist, 2000); }
-    if (!isGoogle) initPrivacyFeatures();
   }
 
   function isValidId(id) {
@@ -593,6 +600,9 @@
   }
 
   function blockFacebookEmbeds() {
+    const now = Date.now();
+    if (blockFacebookEmbeds._lastRun && now - blockFacebookEmbeds._lastRun < 3000) return;
+    blockFacebookEmbeds._lastRun = now;
     const fbPatterns = ['facebook.com', 'www.facebook.com', 'fb.com', 'facebook.net', 'connect.facebook.net', 'fbcdn.net', 'fbcdn.com'];
     function isFbUrl(url) {
       if (!url) return false;
@@ -706,6 +716,9 @@
     const host = window.location.hostname;
     if (skipHosts.some(h => host.includes(h))) return;
     if (host.endsWith('.google.com') || host === 'google.com') return;
+    const now = Date.now();
+    if (removeAdPlaceholders._lastRun && now - removeAdPlaceholders._lastRun < 2000) return;
+    removeAdPlaceholders._lastRun = now;
     const adContainerPatterns = [
       'div[class*="ad"]', 'div[id*="ad"]',
       'ins[class*="ad"]',
@@ -745,6 +758,9 @@
   }
 
   function bypassAntiAdblock() {
+    const now = Date.now();
+    if (bypassAntiAdblock._lastRun && now - bypassAntiAdblock._lastRun < 2000) return;
+    bypassAntiAdblock._lastRun = now;
     const antiAdblockSelectors = [
       '[class*="adblock"]', '[class*="ad-block"]', '[class*="ad_block"]',
       '[id*="adblock"]', '[id*="ad-block"]', '[id*="ad_block"]',
@@ -796,6 +812,9 @@
   }
 
   function detectCryptoMining() {
+    const now = Date.now();
+    if (detectCryptoMining._lastRun && now - detectCryptoMining._lastRun < 3000) return;
+    detectCryptoMining._lastRun = now;
     const patterns = ['coin-hive', 'coinhive', 'cryptoloot', 'crypto-loot', 'webminer', 'webmine'];
     const scripts = document.querySelectorAll('script');
     for (const script of scripts) {
@@ -914,19 +933,27 @@
   function startObserver() {
     const target = document.body || document.documentElement;
     if (!target) { requestAnimationFrame(startObserver); return; }
-    const isGoogle = hostname().endsWith('.google.com') || hostname() === 'google.com';
+    const host = hostname();
+    const isGoogle = host.endsWith('.google.com') || host === 'google.com';
+    let isSubFrame;
+    try { isSubFrame = window.self !== window.top; } catch (e) { isSubFrame = true; }
+    let timer = null;
     const observer = new MutationObserver(() => {
-      if (isGoogle) return;
-      if (config.ads && !isYouTube() && !isCryptoSite()) { removeAdElements(); bypassAntiAdblock(); }
-      if (config.ads && !isYouTube()) removeAdPlaceholders();
-      if (config.crypto && !isCryptoSite()) detectCryptoMining();
-      if (config.containerIsolation && !isFacebookOrigin()) blockFacebookEmbeds();
-      if (config.neverConsent !== false) handleCookieConsent();
-      if (config.enhancedTracking === true) removeTrackingStorage();
-      if (config.xssProtection === true) { monitorXssMutations(); }
-      if (config.clearClick === true && !isCryptoSite()) { scanSuspiciousOverlays(); }
-      if (config.abe !== false) { checkLocalNetworkContent(); }
-      if (window.location.protocol === 'https:') detectMixedContent();
+      if (timer) return;
+      timer = setTimeout(() => {
+        timer = null;
+        if (isGoogle) return;
+        if (config.ads && !isYouTube() && !isCryptoSite()) { removeAdElements(); bypassAntiAdblock(); }
+        if (config.ads && !isYouTube() && !isSubFrame) removeAdPlaceholders();
+        if (config.crypto && !isCryptoSite() && !isSubFrame) detectCryptoMining();
+        if (config.containerIsolation && !isFacebookOrigin()) blockFacebookEmbeds();
+        if (config.neverConsent !== false && !isSubFrame) handleCookieConsent();
+        if (config.enhancedTracking === true && !isSubFrame) removeTrackingStorage();
+        if (config.xssProtection === true) { monitorXssMutations(); }
+        if (config.clearClick === true && !isCryptoSite() && !isSubFrame) { scanSuspiciousOverlays(); }
+        if (config.abe !== false) { checkLocalNetworkContent(); }
+        if (window.location.protocol === 'https:' && !isSubFrame) detectMixedContent();
+      }, 150);
     });
     observer.observe(target, { childList: true, subtree: true });
   }
@@ -1262,6 +1289,9 @@
   }
 
   function handleCookieConsent() {
+    const now = Date.now();
+    if (handleCookieConsent._lastRun && now - handleCookieConsent._lastRun < 2000) return;
+    handleCookieConsent._lastRun = now;
     const banners = findBanners();
     for (const banner of banners) {
       if (banner.offsetParent === null) continue;
@@ -1330,7 +1360,8 @@
         found.add(el);
       }
     }
-    if (found.size === 0) {
+    if (found.size === 0 && !findBanners._fallbackDone) {
+      findBanners._fallbackDone = true;
       const allDivs = document.querySelectorAll('div[class*="cookie" i], div[id*="cookie" i], div[class*="consent" i], div[id*="consent" i]');
       for (const el of allDivs) {
         if (el.offsetParent === null || el.dataset._sfConsent) continue;
@@ -1864,6 +1895,9 @@
   /* ---------- Mixed Content Detection ---------- */
   function detectMixedContent() {
     if (window.location.protocol !== 'https:') return;
+    const now = Date.now();
+    if (detectMixedContent._lastRun && now - detectMixedContent._lastRun < 3000) return;
+    detectMixedContent._lastRun = now;
     const elements = document.querySelectorAll('img[src^="http:"], script[src^="http:"], iframe[src^="http:"], link[href^="http:"], embed[src^="http:"], object[data^="http:"]');
     let count = 0;
     for (const el of elements) {
