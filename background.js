@@ -1536,7 +1536,10 @@ const ALLOWED_SITES = [
   { domain: 'coingecko.com', desc: 'CoinGecko' },
   { domain: 'tvsmotor.com', desc: 'TVS Motor' },
   { domain: 'amazon.in', desc: 'Amazon India' },
-  { domain: 'amazon.com', desc: 'Amazon US' }
+  { domain: 'amazon.com', desc: 'Amazon US' },
+  { domain: 'payments.amazon.in', desc: 'Amazon Payments India' },
+  { domain: 'siege-amazon.com', desc: 'Amazon Siege (payment security)' },
+  { domain: 'payments.amazon.dev', desc: 'Amazon Payments Dev (payment iframes)' }
 ];
 function buildSiteAllowRules() {
   return ALLOWED_SITES.flatMap((site, i) => [

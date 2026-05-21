@@ -157,7 +157,7 @@ A comprehensive Firefox security extension using Manifest V3. Blocks ads, popups
 
 ### Disable Specific Rules
 - Enter any DNR rule ID to disable it (removed from dynamic rules before applying)
-- Static ruleset IDs: 1001-1294 (ads), 100000-100132 (malware), 200001-200124 (crypto), 300001-300172 (phishing)
+- Static ruleset IDs: 1001-1294 (285 rules in ads), 100000-100132 (malware), 200001-200124 (crypto), 300001-300172 (phishing)
 - Dynamic rule IDs: 500000+ (filter lists), 700000+ (JS blocking), 701000+ (custom rules)
 - Disabled IDs stored in `durgashield_disabled_rules`
 
@@ -291,7 +291,7 @@ A comprehensive Firefox security extension using Manifest V3. Blocks ads, popups
 
 | Ruleset | Rule IDs | Rules | Purpose |
 |---|---|---|---|---|---|
-| `ads.json` (static) | 1001-1288 | 288 | Ad networks, trackers, social pixels, analytics |
+| `ads.json` (static) | 1001-1294 | 285 | Ad networks, trackers, social pixels, analytics |
 | `malware.json` (static) | 100000-100132 | 133 | Malware domains, ransomware, scams |
 | `crypto.json` (static) | 200001-200124 | 124 | Crypto miners, mining pools |
 | `phishing.json` (static) | 300001-300172 | 172 | Phishing domains, fake login pages |
@@ -362,7 +362,7 @@ durgashield/
 ├── donations.html         # Donations page
 ├── donations.js           # Donations page script
 ├── rules/
-│   ├── ads.json           # 294 ad blocking rules
+│   ├── ads.json           # 285 ad blocking rules
 │   ├── malware.json       # 133 malware blocking rules
 │   ├── crypto.json        # 124 crypto mining blocking rules
 │   ├── phishing.json      # 172 phishing blocking rules
@@ -411,6 +411,14 @@ Keep README.md updated when adding or modifying features.
 MIT
 
 ## Changelog
+
+### v1.0.7 — Amazon checkout compatibility fix (2026-05-21)
+- **Amazon payment flow fix**: Added `excludedInitiatorDomains: ["amazon.in","amazon.com"]` to 4 `amazon-adsystem.com` DNR block rules (1012, 1014, 1291, 1292) — Amazon uses `amazon-adsystem.com` for fraud detection, checkout telemetry, and payment flow validation, not just ads
+- **Content script disabled on Amazon payment flows**: Heavy feature functions (`initPrivacyFeatures`, `applyExistingFeatures`, `blockFacebookEmbeds`, `setupPasswordLeakCheck`, `overrideWindowOpen`, `removeAdElements`) now skip entirely on `amazon.`/`amazon.dev`/`siege-amazon.com` domains via `_isAmazonPayment` guard
+- **Style injection wrapped in try/catch**: Pre-emptive CSS and empty `<style>` element creation wrapped in try/catch — Amazon payment iframes have strict CSP (`default-src 'self'`) that blocks inline styles; previously uncaught SecurityError terminated content script execution
+- **`document.createElement` wrapper removed**: Global wrapper of `document.createElement` (used only when `jsBlocked` was true, which never happens by default) removed to eliminate any potential DOM API interference
+- **DNR allow rules for payment domains**: Added `payments.amazon.in`, `siege-amazon.com`, and `payments.amazon.dev` to `ALLOWED_SITES` with priority-10 allow rules
+- **CSS selector cleanup**: Removed `div[data-ad]` and `div[data-ad-unit]` from pre-emptive CSS and `removeAdElements()` — these ambiguous attribute selectors matched legitimate page elements (e.g., address-book, dashboard) causing visual breakage on various sites
 
 ### v1.0.6 — Performance overhaul, flicker elimination (2026-05-21)
 - **Pre-emptive CSS injection at `document_start`**: `<style>` with `display:none!important` for known ad selectors injected before first paint — ad elements hidden at CSS level before ever rendered, eliminating flash of blank rectangles

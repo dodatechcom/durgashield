@@ -6,11 +6,16 @@
   let zapperActive = false;
   let jsBlocked = false;
 
+  /* Amazon domains: bail from init() early to avoid CSP & API interference on payment flows */
+  const _isAmazonPayment = window.location.hostname.includes('amazon.') || window.location.hostname.includes('amazon.dev') || window.location.hostname.includes('siege-amazon.com');
+
   /* Pre-emptive CSS: hide known ad elements before first paint */
-  const hideStyle = document.createElement('style');
-  hideStyle.id = 'dgs-instant-hide';
-  hideStyle.textContent = 'ins.adsbygoogle,amp-ad,google-ad,iframe[src*="doubleclick.net"],iframe[src*="googlesyndication.com"],.adsbygoogle[data-ad-status="unfilled"]{display:none!important}';
-  document.documentElement.appendChild(hideStyle);
+  try {
+    var hideStyle = document.createElement('style');
+    hideStyle.id = 'dgs-instant-hide';
+    hideStyle.textContent = 'ins.adsbygoogle,amp-ad,google-ad,iframe[src*="doubleclick.net"],iframe[src*="googlesyndication.com"],.adsbygoogle[data-ad-status="unfilled"]{display:none!important}';
+    document.documentElement.appendChild(hideStyle);
+  } catch (_e) {}
 
   /* ---------- uBlock-style Scriptlets (anti-adblock bypass) ---------- */
   const scriptlets = {};
@@ -220,16 +225,6 @@
     }
   }
 
-  const _origCreateElement = document.createElement.bind(document);
-  document.createElement = function(tag, options) {
-    const el = _origCreateElement(tag, options);
-    if (jsBlocked && tag && tag.toLowerCase() === 'script') {
-      el.type = 'javascript/blocked';
-      setTimeout(() => { try { el.remove(); } catch(e) {} }, 0);
-    }
-    return el;
-  };
-
   const ISOLATED_DOMAINS = [
     'facebook.com', 'www.facebook.com', 'm.facebook.com',
     'fb.com', 'messenger.com', 'www.messenger.com',
@@ -246,11 +241,11 @@
   function isCryptoSite() { const h = hostname(); return h === 'coinmarketcap.com' || h.endsWith('.coinmarketcap.com') || h === 'bitget.com' || h.endsWith('.bitget.com') || h === 'coingecko.com' || h.endsWith('.coingecko.com'); }
 
   // Inject hide-rule style tag immediately (before any async callback)
-  (function() {
-    var st = document.createElement('style');
-    st.id = 'dgs-hide-css';
-    (document.head || document.documentElement).appendChild(st);
-  })();
+  try {
+    var _st = document.createElement('style');
+    _st.id = 'dgs-hide-css';
+    (document.head || document.documentElement).appendChild(_st);
+  } catch (_e) {}
 
   chrome.storage.local.get(['durgashield_config', 'durgashield_hide_rules'], (result) => {
     const saved = result.durgashield_config;
@@ -314,16 +309,16 @@
     if (!isSubFrame) {
       if (!isGoogle) loadCosmeticFilters();
       if (isIsolatedPage() && config.containerIsolation) showContainerIndicator();
-      if (!isFacebookOrigin()) blockFacebookEmbeds();
+      if (!isFacebookOrigin() && !_isAmazonPayment) blockFacebookEmbeds();
       if (!isGoogle) applyExistingFeatures();
       if (config.searchAnnotations) setupSearchAnnotations();
-      if (config.passwordLeakCheck !== false) setupPasswordLeakCheck();
+      if (config.passwordLeakCheck !== false && !_isAmazonPayment) setupPasswordLeakCheck();
       if (isYouTube() && config.ads) startYouTubeAdSkip();
       if (isYouTube()) { detectYouTubeChannel(); setTimeout(checkYouTubeWhitelist, 2000); }
       if (!isGoogle) initPrivacyFeatures();
     } else {
-      if (config.popupBlocking) overrideWindowOpen();
-      if (config.ads && !isYouTube()) removeAdElements();
+      if (config.popupBlocking && !_isAmazonPayment) overrideWindowOpen();
+      if (config.ads && !isYouTube() && !_isAmazonPayment) removeAdElements();
     }
     startObserver();
   }
@@ -638,18 +633,17 @@
   }
 
   function applyExistingFeatures() {
-    const host = window.location.hostname;
-    const isAmazon = host.includes('amazon.') || host.includes('payments.');
+    if (_isAmazonPayment) return;
     if (config.popupBlocking) overrideWindowOpen();
     if (config.videoRedirect === true) preventVideoRedirect();
     if (config.ads) { if (isYouTube()) blockYouTubeAds(); else if (!isCryptoSite()) removeAdElements(); }
-    if (config.ads && !isAmazon) removeAdPlaceholders();
+    if (config.ads) removeAdPlaceholders();
     if (config.crypto && !isCryptoSite()) { detectCryptoMining(); detectCryptoScams(); }
-    if (config.phishing && !isAmazon) { detectFakeLoginForms(); detectFakeAddressBar(); detectHttpPasswordFields(); }
-    if (config.malware && !isAmazon) { detectKeyloggers(); detectTechSupportScams(); }
+    if (config.phishing) { detectFakeLoginForms(); detectFakeAddressBar(); detectHttpPasswordFields(); }
+    if (config.malware) { detectKeyloggers(); detectTechSupportScams(); }
     if (config.enhancedTracking !== false) preventClipboardHijack();
     if (config.ads && window.location.hostname.includes('facebook.com')) removeFacebookAds();
-    if (config.ads && !isCryptoSite() && !isAmazon) dismissInterstitials();
+    if (config.ads && !isCryptoSite()) dismissInterstitials();
     if (config.metadataCleanup) setupMetadataCleanup();
   }
 
@@ -1104,6 +1098,7 @@
   }
 
   function initPrivacyFeatures() {
+    if (_isAmazonPayment) return;
     removeLinkTracking();
     replaceSocialWidgets();
     if (!isFacebookOrigin() && !isYouTube()) scanThirdParties();

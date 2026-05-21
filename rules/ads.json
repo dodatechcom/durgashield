@@ -10,8 +10,8 @@
   {"id":1009,"priority":1,"action":{"type":"block"},"condition":{"urlFilter":"||facebook.com/tr^","resourceTypes":["script","image","xmlhttprequest","ping"]}},
   {"id":1010,"priority":1,"action":{"type":"block"},"condition":{"urlFilter":"||connect.facebook.net^","resourceTypes":["script","xmlhttprequest"]}},
   {"id":1011,"priority":1,"action":{"type":"block"},"condition":{"urlFilter":"||an.facebook.com^","resourceTypes":["script","image","xmlhttprequest"]}},
-  {"id":1012,"priority":1,"action":{"type":"block"},"condition":{"urlFilter":"||amazon-adsystem.com^","resourceTypes":["script","image","xmlhttprequest","sub_frame"]}},
-  {"id":1014,"priority":1,"action":{"type":"block"},"condition":{"urlFilter":"||aax.amazon-adsystem.com^","resourceTypes":["script","xmlhttprequest"]}},
+  {"id":1012,"priority":1,"action":{"type":"block"},"condition":{"urlFilter":"||amazon-adsystem.com^","resourceTypes":["script","image","xmlhttprequest","sub_frame"],"excludedInitiatorDomains":["amazon.in","amazon.com"]}},
+  {"id":1014,"priority":1,"action":{"type":"block"},"condition":{"urlFilter":"||aax.amazon-adsystem.com^","resourceTypes":["script","xmlhttprequest"],"excludedInitiatorDomains":["amazon.in","amazon.com"]}},
   {"id":1015,"priority":1,"action":{"type":"block"},"condition":{"urlFilter":"||adnxs.com^","resourceTypes":["script","image","xmlhttprequest","sub_frame"]}},
   {"id":1016,"priority":1,"action":{"type":"block"},"condition":{"urlFilter":"||adsrvr.org^","resourceTypes":["script","image","xmlhttprequest"]}},
   {"id":1017,"priority":1,"action":{"type":"block"},"condition":{"urlFilter":"||rubiconproject.com^","resourceTypes":["script","image","xmlhttprequest","sub_frame"]}},
@@ -280,8 +280,8 @@
   {"id":1288,"priority":1,"action":{"type":"block"},"condition":{"urlFilter":"||tpc.googlesyndication.com^","resourceTypes":["image","sub_frame"]}},
   {"id":1289,"priority":1,"action":{"type":"block"},"condition":{"urlFilter":"||adserver.twitter.com^","resourceTypes":["script","image","xmlhttprequest"]}},
   {"id":1290,"priority":1,"action":{"type":"block"},"condition":{"urlFilter":"||partner.googleadservices.com^","resourceTypes":["script","xmlhttprequest"]}},
-  {"id":1291,"priority":1,"action":{"type":"block"},"condition":{"urlFilter":"||c.amazon-adsystem.com^","resourceTypes":["script","xmlhttprequest"]}},
-  {"id":1292,"priority":1,"action":{"type":"block"},"condition":{"urlFilter":"||s.amazon-adsystem.com^","resourceTypes":["script","image","xmlhttprequest"]}},
+  {"id":1291,"priority":1,"action":{"type":"block"},"condition":{"urlFilter":"||c.amazon-adsystem.com^","resourceTypes":["script","xmlhttprequest"],"excludedInitiatorDomains":["amazon.in","amazon.com"]}},
+  {"id":1292,"priority":1,"action":{"type":"block"},"condition":{"urlFilter":"||s.amazon-adsystem.com^","resourceTypes":["script","image","xmlhttprequest"],"excludedInitiatorDomains":["amazon.in","amazon.com"]}},
   {"id":1293,"priority":1,"action":{"type":"block"},"condition":{"urlFilter":"||dt.adsafeprotected.com^","resourceTypes":["xmlhttprequest"]}},
   {"id":1294,"priority":1,"action":{"type":"block"},"condition":{"urlFilter":"||tracking.epicgames.com^","resourceTypes":["script","xmlhttprequest","ping"]}}
 ]
