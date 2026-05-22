@@ -36,7 +36,8 @@ const DEFAULT_CONFIG = {
   downloadScan: true, social: true, annoyance: true, cdnReplacement: true,
   metadataCleanup: false, searchAnnotations: true, videoRedirect: false, httpsEnforce: true, passwordLeakCheck: true,
   'cc-adult': false, 'cc-gambling': false, 'cc-violence': false,
-  aiDlp: false, defacementDetect: false, phoneScamDetect: false
+  aiDlp: false, defacementDetect: false, phoneScamDetect: false,
+  phishingLinkDetect: false, fbPrivacy: false
 };
 
 const CONTAINER_NAME = 'Social Media';
@@ -1369,6 +1370,18 @@ case 'getYouTubeWhitelist':
         sendResponse({ score, grade, trackerCount, https });
       })();
       return true;
+    case 'getSiteBlocker':
+      getSiteBlockerList().then(sendResponse);
+      return true;
+    case 'saveSiteBlocker':
+      saveSiteBlockerList(message.domains).then(sendResponse);
+      return true;
+    case 'getAcceptableAds':
+      getAcceptableAds().then(sendResponse);
+      return true;
+    case 'saveAcceptableAds':
+      saveAcceptableAds(message.domains).then(sendResponse);
+      return true;
   }
 });
 
@@ -1803,4 +1816,62 @@ async function scanExtensions() {
 async function getExtensionAudit() {
   const r = await chrome.storage.local.get(EXTENSION_RISK_KEY);
   return r[EXTENSION_RISK_KEY] || [];
+}
+
+/* ---------- Site Blocker (Productivity) ---------- */
+const SITE_BLOCKER_KEY = 'durgashield_site_blocker';
+const SITE_BLOCKER_RULE_START = 702000;
+async function getSiteBlockerList() {
+  const r = await chrome.storage.local.get(SITE_BLOCKER_KEY);
+  return r[SITE_BLOCKER_KEY] || [];
+}
+async function saveSiteBlockerList(domains) {
+  await chrome.storage.local.set({ [SITE_BLOCKER_KEY]: domains });
+  await applySiteBlockerRules(domains);
+}
+async function applySiteBlockerRules(domains) {
+  try {
+    const existing = await chrome.declarativeNetRequest.getDynamicRules();
+    const oldIds = existing.filter(r => r.id >= SITE_BLOCKER_RULE_START && r.id < SITE_BLOCKER_RULE_START + 100).map(r => r.id);
+    if (domains.length === 0) {
+      await chrome.declarativeNetRequest.updateDynamicRules({ removeRuleIds: oldIds, addRules: [] });
+      return;
+    }
+    const rules = domains.map((d, i) => ({
+      id: SITE_BLOCKER_RULE_START + i,
+      priority: 100,
+      action: { type: 'block' },
+      condition: { urlFilter: '||' + d + '^', resourceTypes: ['main_frame'] }
+    }));
+    await chrome.declarativeNetRequest.updateDynamicRules({ removeRuleIds: oldIds, addRules: rules });
+  } catch (e) { console.warn('DurgaShield: site blocker error:', e); }
+}
+
+/* ---------- Acceptable Ads ---------- */
+const ACCEPTABLE_ADS_KEY = 'durgashield_acceptable_ads';
+const ACCEPTABLE_ADS_RULE_START = 703000;
+async function getAcceptableAds() {
+  const r = await chrome.storage.local.get(ACCEPTABLE_ADS_KEY);
+  return r[ACCEPTABLE_ADS_KEY] || [];
+}
+async function saveAcceptableAds(domains) {
+  await chrome.storage.local.set({ [ACCEPTABLE_ADS_KEY]: domains });
+  await applyAcceptableAdsRules(domains);
+}
+async function applyAcceptableAdsRules(domains) {
+  try {
+    const existing = await chrome.declarativeNetRequest.getDynamicRules();
+    const oldIds = existing.filter(r => r.id >= ACCEPTABLE_ADS_RULE_START && r.id < ACCEPTABLE_ADS_RULE_START + 200).map(r => r.id);
+    if (domains.length === 0) {
+      await chrome.declarativeNetRequest.updateDynamicRules({ removeRuleIds: oldIds, addRules: [] });
+      return;
+    }
+    const rules = domains.map((d, i) => ({
+      id: ACCEPTABLE_ADS_RULE_START + i,
+      priority: 200,
+      action: { type: 'allow' },
+      condition: { urlFilter: '||' + d + '^', resourceTypes: ['script', 'image', 'stylesheet', 'xmlhttprequest', 'other'] }
+    }));
+    await chrome.declarativeNetRequest.updateDynamicRules({ removeRuleIds: oldIds, addRules: rules });
+  } catch (e) { console.warn('DurgaShield: acceptable ads error:', e); }
 }

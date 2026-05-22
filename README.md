@@ -1,12 +1,12 @@
 # DurgaShield
 
-A comprehensive Firefox security extension using Manifest V3. Blocks ads, popups, crypto miners, malware, phishing sites, and cookie consent popups. Includes filter lists, element zapper, heuristic tracker detection, GPC/DNT headers, CDN resource localization, stealth mode, anti-fingerprinting, Never-Consent, enhanced anti-tracking, XSS protection, ClearClick anti-clickjacking, ABE local network protection, 200+ tracking parameter stripping, YouTube annoyance cleanup, mixed content blocking, download malware scanning, and isolates social media activity into a dedicated container.
+A comprehensive Firefox security extension using Manifest V3. Blocks ads, popups, crypto miners, malware, phishing sites, and cookie consent popups. Includes filter lists, element zapper, heuristic tracker detection, GPC/DNT headers, CDN resource localization, stealth mode, anti-fingerprinting, Never-Consent, enhanced anti-tracking, XSS protection, ClearClick anti-clickjacking, ABE local network protection, 200+ tracking parameter stripping, YouTube annoyance cleanup, mixed content blocking, download malware scanning, GenAI data leak prevention, extension risk audit, defacement detection, phone scam detection, website privacy scoring, crypto scam detection, phishing link detection, streaming ad blocking, Facebook/Instagram privacy controls, site blocker, acceptable ads management, and isolates social media activity into a dedicated container.
 
 <h2>Why Choose DurgaShield?</h2>
 
 | | |
 |---|---|
-| **Comprehensive** | 30+ features in one extension |
+| **Comprehensive** | 35+ features in one extension |
 | **Privacy-focused** | No tracking, no data collection |
 | **Open source** | Fully transparent codebase |
 | **All-in-one** | Replaces 8–10 separate extensions |
@@ -74,6 +74,47 @@ A comprehensive Firefox security extension using Manifest V3. Blocks ads, popups
 - **A-F grading**: Calculates a privacy score (0-100) for the current site based on HTTPS status and detected tracker count
 - **Conic gradient ring**: Visual grade displayed as a colored ring in the Dashboard tab (green=A, blue=B, yellow=C, orange=D, red=F)
 - **Algorithm**: HTTPS = +80 base; each tracker deducts 5 points (max -40)
+
+### Crypto Scam Detection
+- **Scam keyword analysis**: Scans page text for 35+ indicators — fake airdrops, wallet drains, seed phrase requests, fake exchange giveaways, rug pulls, token approval scams
+- **Link marking**: Marks suspicious `<a>` tags pointing to airdrop/giveaway domains with red coloring
+- **Enhanced patterns**: Covers fake support impersonation, NFT mint scams, wallet verification phishing, and bogus presales
+- **Provides warning**: Shows a prominent warning banner when crypto scams are detected
+- **Built-in**: Enabled by default as part of Crypto Miner Blocking toggle
+
+### Phishing Link Detection
+- **Brand impersonation check**: Scans all `<a>` links for misspelled brand domains (e.g., `g00gle.com`, `faceb00k.com`, `paypa1.com`)
+- **IP-based URL detection**: Flags IP-address links combined with login/banking keywords
+- **URL shortener identification**: Detects and flags links using shorteners (bit.ly, tinyurl, t.co, etc.)
+- **Excessive subdomain detection**: Warns on URLs with 4+ subdomains combined with login/verify paths
+- **Click interceptor**: Prevents navigation to flagged links and shows a warning with the specific reason
+- **Visual marking**: Flagged links are colored red on the page
+- **Opt-in**: Disabled by default; enable via the **Phishing Link Detection** toggle in Features tab
+
+### Streaming Service Ad Blocking
+- **Spotify Web Player**: Hides ad banners, upsell cards, premium prompts, and ad containers on `open.spotify.com`
+- **Crunchyroll**: Removes ad breaks, prerolls, and ad overlays on `crunchyroll.com`
+- **YouTube Music**: Hides ad containers and promotional elements on `music.youtube.com`
+- **SoundCloud**: Removes promoted tracks and ad units on `soundcloud.com`
+- **No toggle needed**: Enabled automatically when Ad Blocker is active
+
+### Facebook/Instagram Privacy Controls
+- **Messenger**: Hides "Seen by" indicators, read receipts (blue ticks), and typing status on `facebook.com` and `messenger.com`
+- **Instagram DM**: Suppresses seen indicators and typing indicators in Instagram Direct Messages
+- **Active status**: Hides "Active Now" / "Active Xm ago" indicators on both platforms
+- **Opt-in**: Disabled by default; enable via the **Facebook/Instagram Privacy** toggle in Features tab
+
+### Site Blocker (Productivity)
+- **Custom domain list**: Add distracting websites (e.g., `reddit.com`, `twitter.com`) in the Advanced tab
+- **DNR block rules**: Uses `declarativeNetRequest` dynamic rules (IDs 702000+) to block main_frame navigation to listed domains
+- **Easy management**: Textarea input — one domain per line; save and apply immediately
+- **Full blocking**: Blocked domains show a blank page; cannot be navigated to while enabled
+
+### Acceptable Ads Management
+- **Selective whitelisting**: Allow specific non-intrusive ad networks (e.g., `googleads.g.doubleclick.net`) through the blocker
+- **DNR allow rules**: Uses `declarativeNetRequest` dynamic rules (IDs 703000+) with priority 200 to override block rules
+- **Per-domain control**: Add/remove domains via textarea in the Advanced tab
+- **Use cases**: Support sites that require ads to function, or whitelist respectful ad networks
 
 ### Anti-Anti-Adblock System
 - **Overlay detection** — scans for "disable adblock to continue" walls using 30+ selector patterns (`adblock*`, `ad-detected*`, `adblocker-wall*`, `adblock-overlay*`, `adblock-modal*`, etc.)
@@ -189,7 +230,7 @@ A comprehensive Firefox security extension using Manifest V3. Blocks ads, popups
 ### Disable Specific Rules
 - Enter any DNR rule ID to disable it (removed from dynamic rules before applying)
 - Static ruleset IDs: 1001-1298 (289 rules in ads), 100000-100132 (malware), 200001-200124 (crypto), 300001-300172 (phishing)
-- Dynamic rule IDs: 500000+ (filter lists), 700000+ (JS blocking), 701000+ (custom rules)
+- Dynamic rule IDs: 500000+ (filter lists), 700000+ (JS blocking), 701000+ (custom rules), 702000+ (site blocker), 703000+ (acceptable ads)
 - Disabled IDs stored in `durgashield_disabled_rules`
 
 ### Auto-Updating Filter Lists
@@ -442,6 +483,15 @@ Keep README.md updated when adding or modifying features.
 MIT
 
 ## Changelog
+
+### v1.1.0 — Crypto scam detection, phishing links, streaming ads, FB/IG privacy, site blocker, acceptable ads (2026-05-22)
+- **Crypto Scam Detection Enhanced**: Added 18 new scam indicators (wallet drainers, fake exchange, impersonating support, NFT mint scams) and marks suspicious airdrop/giveaway links in red
+- **Phishing Link Detection**: Scans all page `<a>` links for brand impersonation (misspelled domains like `g00gle.com`, `paypa1.com`), IP-based URLs with phishing keywords, URL shorteners, excessive subdomains. Colors flagged links red, intercepts clicks with warning. Opt-in, disabled by default.
+- **Streaming Service Ad Blocking**: Blocks ad containers/overlays/banners on Spotify Web Player, Crunchyroll, YouTube Music, and SoundCloud. Gated by Ad Blocker toggle.
+- **Facebook/Instagram Privacy Controls**: Hides seen indicators, read receipts, typing status, and active status on Facebook Messenger and Instagram DM. Opt-in, disabled by default.
+- **Site Blocker (Productivity)**: Custom domain block list in Advanced tab. Uses DNR dynamic rules (IDs 702000+) to block main_frame navigation to distracting sites.
+- **Acceptable Ads Management**: Whitelist specific ad network domains in Advanced tab. Uses DNR allow rules (IDs 703000+, priority 200) to override block rules.
+- **DNR rule ranges updated**: 702000+ site blocker, 703000+ acceptable ads.
 
 ### v1.0.9 — GenAI DLP, extension audit, social feed ads, Twitch/Gmail blocking (2026-05-21)
 - **GenAI Data Leak Prevention**: Detects and warns when sensitive data (credit cards, SSNs, passwords, API keys) is typed into ChatGPT, Gemini, Claude, Copilot, DeepSeek, and other AI chat platforms. Monitors inputs, fetch bodies, and blur events. Config toggle in Features tab (opt-in, disabled by default).

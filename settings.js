@@ -28,7 +28,9 @@ const FEATURES = [
   { id:'httpsEnforce', icon:'HT', bg:'#28a745', label:'HTTPS Enforcement', desc:'Upgrades HTTP connections to HTTPS on major sites', cat:'Security' },
   { id:'aiDlp', icon:'AI', bg:'#6f42c1', label:'GenAI Data Leak Prevention', desc:'Warns when sending sensitive data (SSN, passwords, API keys) to AI chatbots', cat:'Privacy' },
   { id:'defacementDetect', icon:'DF', bg:'#dc3545', label:'Defacement Detection', desc:'Detects possible site defacement/hacking', cat:'Security' },
-  { id:'phoneScamDetect', icon:'PH', bg:'#e94560', label:'Phone Scam Detection', desc:'Detects phone scam tactics on pages', cat:'Security' }
+  { id:'phoneScamDetect', icon:'PH', bg:'#e94560', label:'Phone Scam Detection', desc:'Detects phone scam tactics on pages', cat:'Security' },
+  { id:'phishingLinkDetect', icon:'PL', bg:'#e67e22', label:'Phishing Link Detection', desc:'Analyzes links for brand impersonation and suspicious patterns', cat:'Security' },
+  { id:'fbPrivacy', icon:'FB', bg:'#1877f2', label:'Facebook/Instagram Privacy', desc:'Hides seen indicators, typing status, and read receipts', cat:'Privacy' }
 ];
 
 let config = {};
@@ -513,6 +515,10 @@ async function renderAdvanced() {
     renderImportExport();
     // Password Leak Detection
     renderPasswordLeak();
+    // Site Blocker
+    renderSiteBlocker();
+    // Acceptable Ads
+    renderAcceptableAds();
     // Reset Stats
     if ($('resetStats')) {
       $('resetStats').onclick = async function() {
@@ -921,6 +927,62 @@ async function renderPrivacyScore() {
     var textEl = ring.nextElementSibling;
     if (textEl) textEl.textContent = gradeTexts[result.grade] || 'Unknown';
   } catch (e) {}
+}
+
+/* ---------- Site Blocker (Productivity) ---------- */
+async function renderSiteBlocker() {
+  var el = document.getElementById('siteBlockerCard');
+  if (!el) return;
+  var list = await chrome.runtime.sendMessage({ type: 'getSiteBlocker' });
+  var html = '<div style="margin-bottom:8px;font-size:11px;color:#555;line-height:1.5">Block distracting websites. Add one domain per line (e.g. <code>reddit.com</code>).</div>';
+  html += '<textarea id="siteBlockerInput" style="width:100%;height:100px;border:1px solid #ddd;border-radius:4px;padding:6px;font-family:monospace;font-size:11px;resize:vertical">' + (list ? list.join('\n') : '') + '</textarea>';
+  html += '<div style="margin-top:6px;display:flex;gap:8px;align-items:center">';
+  html += '<button class="btn btn-primary" id="saveSiteBlockerBtn" style="font-size:11px;padding:4px 12px">&#x1F4BE; Save Block List</button>';
+  html += '<span id="siteBlockerStatus" style="font-size:11px;color:#888"></span>';
+  html += '</div>';
+  el.innerHTML = html;
+  var saveBtn = document.getElementById('saveSiteBlockerBtn');
+  if (saveBtn) {
+    saveBtn.onclick = async function() {
+      var input = document.getElementById('siteBlockerInput');
+      var domains = input.value.trim().split('\n').map(function(d) { return d.trim().toLowerCase(); }).filter(function(d) { return d.length > 0 && !d.startsWith('#') && d.includes('.'); });
+      var statusEl = document.getElementById('siteBlockerStatus');
+      try {
+        await chrome.runtime.sendMessage({ type: 'saveSiteBlocker', domains: domains });
+        if (statusEl) statusEl.textContent = 'Saved ' + domains.length + ' domains';
+      } catch (e) {
+        if (statusEl) statusEl.textContent = 'Error: ' + e.message;
+      }
+    };
+  }
+}
+
+/* ---------- Acceptable Ads Whitelist ---------- */
+async function renderAcceptableAds() {
+  var el = document.getElementById('acceptableAdsCard');
+  if (!el) return;
+  var list = await chrome.runtime.sendMessage({ type: 'getAcceptableAds' });
+  var html = '<div style="margin-bottom:8px;font-size:11px;color:#555;line-height:1.5">Allow certain non-intrusive ad networks. Add one domain per line (e.g. <code>googleads.g.doubleclick.net</code>).</div>';
+  html += '<textarea id="acceptableAdsInput" style="width:100%;height:80px;border:1px solid #ddd;border-radius:4px;padding:6px;font-family:monospace;font-size:11px;resize:vertical">' + (list ? list.join('\n') : '') + '</textarea>';
+  html += '<div style="margin-top:6px;display:flex;gap:8px;align-items:center">';
+  html += '<button class="btn btn-primary" id="saveAcceptableAdsBtn" style="font-size:11px;padding:4px 12px">&#x1F4BE; Save Whitelist</button>';
+  html += '<span id="acceptableAdsStatus" style="font-size:11px;color:#888"></span>';
+  html += '</div>';
+  el.innerHTML = html;
+  var saveBtn = document.getElementById('saveAcceptableAdsBtn');
+  if (saveBtn) {
+    saveBtn.onclick = async function() {
+      var input = document.getElementById('acceptableAdsInput');
+      var domains = input.value.trim().split('\n').map(function(d) { return d.trim().toLowerCase(); }).filter(function(d) { return d.length > 0 && !d.startsWith('#') && d.includes('.'); });
+      var statusEl = document.getElementById('acceptableAdsStatus');
+      try {
+        await chrome.runtime.sendMessage({ type: 'saveAcceptableAds', domains: domains });
+        if (statusEl) statusEl.textContent = 'Saved ' + domains.length + ' domains';
+      } catch (e) {
+        if (statusEl) statusEl.textContent = 'Error: ' + e.message;
+      }
+    };
+  }
 }
 
 async function init() {

@@ -2,7 +2,7 @@
   if (window._durgashield_loaded) return;
   window._durgashield_loaded = true;
 
-  const config = { ads: true, malware: true, crypto: true, phishing: true, popupBlocking: true, containerIsolation: true, searchAnnotations: true, metadataCleanup: false, videoRedirect: false, stealth: false, enhancedTracking: false, xssProtection: false, clearClick: false, aiDlp: false, defacementDetect: false, phoneScamDetect: false };
+  const config = { ads: true, malware: true, crypto: true, phishing: true, popupBlocking: true, containerIsolation: true, searchAnnotations: true, metadataCleanup: false, videoRedirect: false, stealth: false, enhancedTracking: false, xssProtection: false, clearClick: false, aiDlp: false, defacementDetect: false, phoneScamDetect: false, phishingLinkDetect: false, fbPrivacy: false };
   let zapperActive = false;
   let jsBlocked = false;
 
@@ -319,6 +319,8 @@
       initGenAIDLP();
       detectDefacement();
       detectPhoneScams();
+      detectPhishingLinks();
+      applyFBPrivacy();
     } else {
       if (config.popupBlocking && !_isAmazonPayment) overrideWindowOpen();
       if (config.ads && !isYouTube() && !_isAmazonPayment) removeAdElements();
@@ -648,7 +650,7 @@
     if (config.ads && window.location.hostname.includes('facebook.com')) removeFacebookAds();
     if (config.ads && !isCryptoSite()) dismissInterstitials();
     if (config.metadataCleanup) setupMetadataCleanup();
-    if (config.ads) { blockTwitchAds(); blockGmailAds(); removeSocialFeedAds(); }
+    if (config.ads) { blockTwitchAds(); blockGmailAds(); removeSocialFeedAds(); blockStreamingAds(); }
   }
 
   let videoRedirectActive = false;
@@ -962,7 +964,7 @@
         if (isGoogle || isAmazon) return;
         if (config.ads && !isYouTube() && !isCryptoSite()) { removeAdElements(); bypassAntiAdblock(); }
         if (config.ads && !isYouTube() && !isSubFrame) removeAdPlaceholders();
-        if (config.ads) { blockTwitchAds(); blockGmailAds(); removeSocialFeedAds(); }
+        if (config.ads) { blockTwitchAds(); blockGmailAds(); removeSocialFeedAds(); blockStreamingAds(); }
         if (config.crypto && !isCryptoSite() && !isSubFrame) detectCryptoMining();
         if (config.containerIsolation && !isFacebookOrigin()) blockFacebookEmbeds();
         if (config.neverConsent !== false && !isSubFrame) handleCookieConsent();
@@ -971,6 +973,8 @@
         if (config.clearClick === true && !isCryptoSite() && !isSubFrame) { scanSuspiciousOverlays(); }
         if (config.abe !== false) { checkLocalNetworkContent(); }
         if (window.location.protocol === 'https:' && !isSubFrame) detectMixedContent();
+        if (config.phishingLinkDetect === true && !isSubFrame) detectPhishingLinks();
+        if (config.fbPrivacy === true && !isSubFrame) applyFBPrivacy();
       }, 100);
     });
     observer.observe(target, { childList: true, subtree: true });
@@ -2269,7 +2273,13 @@
       'validate your wallet', 'connect wallet to claim', 'approve contract',
       'metamask sync', 'wallet verification', 'seed phrase', 'private key required',
       'enter your seed phrase', 'verify your wallet', 'token approval',
-      'fake token sale', 'presale', 'rug pull'
+      'fake token sale', 'presale', 'rug pull',
+      'eth to earn', 'btc to earn', 'crypto investment opportunity',
+      'guaranteed returns', 'get rich quick', 'crypto signal group',
+      'exclusive airdrop', 'whitelist giveaway', 'nft mint scam',
+      'wallet drainer', 'approve malicious', 'revoke approval',
+      'fake exchange', 'claim btc', 'claim eth', 'claim usdt',
+      'send crypto to get', 'impersonating support',
     ];
     const found = indicators.filter(s => bodyText.includes(s));
     if (found.length > 0) {
@@ -2278,6 +2288,16 @@
       if (typeof chrome !== 'undefined' && chrome.runtime) {
         chrome.runtime.sendMessage({ type: 'incrementBlocked', category: 'crypto', count: found.length });
       }
+    }
+    const links = document.querySelectorAll('a[href*="airdrop"], a[href*="giveaway"], a[href*="claim"], a[href*="free-eth"], a[href*="free-btc"]');
+    for (const link of links) {
+      try {
+        const parsed = new URL(link.href);
+        if (!parsed.hostname.includes(hostname())) {
+          link.style.setProperty('color', '#dc3545', 'important');
+          link.setAttribute('data-ds-scam-link', 'true');
+        }
+      } catch (e) {}
     }
   }
 
@@ -2529,6 +2549,149 @@
     if (found.length > 2) {
       chrome.runtime.sendMessage({ type: 'incrementBlocked', category: 'malware', count: 1 });
       showWarning('Potential phone scam detected! This page uses common scam tactics. Do not call any numbers listed.');
+    }
+  }
+
+  /* ---------- Streaming Service Ad Blocking (Spotify, Crunchyroll) ---------- */
+  function blockStreamingAds() {
+    if (config.ads !== true) return;
+    const host = hostname();
+    let count = 0;
+    if (host === 'open.spotify.com' || host.endsWith('.spotify.com')) {
+      const spotifyAds = document.querySelectorAll(
+        '[data-testid="upsell-card"], [class*="ad"], [class*="Ad"], [id*="ad"], [id*="Ad"], ' +
+        '[data-testid="ad-container"], [class*="advertisement"], [class*="ad-container"], ' +
+        '[class*="tracklist-ad"], [aria-label*="ad"], [aria-label*="Ad"], ' +
+        '[data-testid="banner"], [data-testid*="premium"]'
+      );
+      for (const el of spotifyAds) {
+        if (el.offsetParent !== null) { el.style.setProperty('display', 'none', 'important'); count++; }
+      }
+      const adSlots = document.querySelectorAll('div[role="banner"][class*=""], section[class*="ad"]');
+      for (const el of adSlots) {
+        if (el.offsetParent !== null) { el.style.setProperty('display', 'none', 'important'); count++; }
+      }
+    }
+    if (host === 'crunchyroll.com' || host.endsWith('.crunchyroll.com')) {
+      const crAds = document.querySelectorAll(
+        '.ad-container, .advertisement, [class*="-ad-"], [id*="ad-"], ' +
+        '[class*="ad-break"], [class*="preroll"], .video-ad, ' +
+        '.ad-overlay, .ad-unit, [data-testid*="ad"]'
+      );
+      for (const el of crAds) {
+        if (el.offsetParent !== null) { el.style.setProperty('display', 'none', 'important'); count++; }
+      }
+    }
+    if (host === 'music.youtube.com' || host.endsWith('.music.youtube.com')) {
+      const ytMusicAds = document.querySelectorAll(
+        'ytmusic-ad-container, ytmusic-ad, .ad-container, [id*="ad"], [class*="ad"], ' +
+        '[aria-label*="ad"], [aria-label*="Ad"]'
+      );
+      for (const el of ytMusicAds) {
+        if (el.offsetParent !== null) { el.style.setProperty('display', 'none', 'important'); count++; }
+      }
+    }
+    if (host === 'soundcloud.com' || host.endsWith('.soundcloud.com')) {
+      const scAds = document.querySelectorAll(
+        '.adContainer, .adUnit, [class*="-ad-"], [id*="ad-"], ' +
+        '[class*="advertisement"], [class*="promoted"], [class*="sponsored"]'
+      );
+      for (const el of scAds) {
+        if (el.offsetParent !== null) { el.style.setProperty('display', 'none', 'important'); count++; }
+      }
+    }
+    if (count > 0) { queueBlockCount(count); removeAdPlaceholders(); }
+  }
+
+  /* ---------- Phishing Link Detection ---------- */
+  function detectPhishingLinks() {
+    if (config.phishingLinkDetect !== true) return;
+    const host = hostname();
+    const brandPatterns = [
+      { pattern: /go0+gle/i, label: 'Google' },
+      { pattern: /facebo0+k/i, label: 'Facebook' },
+      { pattern: /y0utube|youtu[e3]e/i, label: 'YouTube' },
+      { pattern: /ama[sz]on/i, label: 'Amazon' },
+      { pattern: /micr0s0ft|micr0$0ft|micr0soft/i, label: 'Microsoft' },
+      { pattern: /app[e3]e\b/i, label: 'Apple' },
+      { pattern: /paypa[l1]/i, label: 'PayPal' },
+      { pattern: /instagra[mrn]/i, label: 'Instagram' },
+      { pattern: /twi[t+]e?r|twltter|twiiter/i, label: 'Twitter/X' },
+      { pattern: /netfli[xk]/i, label: 'Netflix' },
+      { pattern: /whatsappp/i, label: 'WhatsApp' },
+      { pattern: /telegra[mrn]/i, label: 'Telegram' },
+      { pattern: /githu[b6]/i, label: 'GitHub' },
+      { pattern: /linke[d9]in|linked1n/i, label: 'LinkedIn' },
+    ];
+    const phishingKeywords = ['login', 'signin', 'verify', 'secure', 'account', 'update', 'confirm', 'banking', 'password', 'credential'];
+    const urlShorteners = ['bit.ly', 'tinyurl.com', 'tiny.cc', 't.co', 'goo.gl', 'shorturl.at', 'ow.ly', 'is.gd', 'buff.ly', 'cli.gs', 'rb.gy', 'bl.ink', 'short.link', 'cutt.ly'];
+    const suspiciousLinks = [];
+    const links = document.querySelectorAll('a[href]');
+    for (const link of links) {
+      try {
+        const href = link.href;
+        if (!href || href.startsWith('javascript') || href.startsWith('#') || href.startsWith('mailto:')) continue;
+        const parsed = new URL(href);
+        const hreflink = parsed.hostname.replace(/^www\./, '');
+        if (hreflink === host) continue;
+        let reasons = [];
+        if (urlShorteners.some(s => hreflink.includes(s))) reasons.push('URL shortener (' + hreflink + ')');
+        const ipMatch = parsed.hostname.match(/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/);
+        if (ipMatch && phishingKeywords.some(k => (link.textContent || '').toLowerCase().includes(k) || parsed.pathname.toLowerCase().includes(k))) {
+          reasons.push('IP-based URL with phishing keywords');
+        }
+        for (const bp of brandPatterns) {
+          if (bp.pattern.test(parsed.hostname) && !parsed.hostname.includes(host)) {
+            reasons.push('Brand impersonation: ' + bp.label + ' (' + parsed.hostname + ')');
+          }
+        }
+        const subdomainCount = (parsed.hostname.match(/\./g) || []).length;
+        if (subdomainCount > 3 && phishingKeywords.some(k => parsed.pathname.toLowerCase().includes(k))) {
+          reasons.push('Excessive subdomains with phishing pattern');
+        }
+        if (reasons.length > 0) {
+          suspiciousLinks.push({ el: link, reasons: reasons });
+          link.style.setProperty('color', '#dc3545', 'important');
+          if (!link.dataset.dsPhishWarned) {
+            link.dataset.dsPhishWarned = 'true';
+            link.dataset.dsPhishReasons = reasons.join('; ');
+            const origClick = link.onclick;
+            link.addEventListener('click', function(e) {
+              if (config.phishingLinkDetect !== true) return;
+              e.preventDefault();
+              e.stopPropagation();
+              queueBlockCount(1);
+              showWarning('Suspicious link detected! This may be a phishing attempt.\n' + this.dataset.dsPhishReasons + '\n\nURL: ' + this.href);
+            });
+          }
+        }
+      } catch (e) {}
+    }
+    if (suspiciousLinks.length > 0) {
+      chrome.runtime.sendMessage({ type: 'incrementBlocked', category: 'phishing', count: suspiciousLinks.length });
+    }
+  }
+
+  /* ---------- Facebook/Instagram Privacy Controls ---------- */
+  function applyFBPrivacy() {
+    if (config.fbPrivacy !== true) return;
+    const host = hostname();
+    if (!host.includes('facebook.com') && !host.includes('messenger.com') && !host.includes('instagram.com')) return;
+    if (host.includes('facebook.com') || host.includes('messenger.com')) {
+      const seenIndicators = document.querySelectorAll('[aria-label*="Seen"], [aria-label*="seen"], [data-testid*="typing"], [class*="typing"], [data-testid*="seen"]');
+      for (const el of seenIndicators) { el.style.setProperty('display', 'none', 'important'); }
+      const readTicks = document.querySelectorAll('[data-visualcompletion="ignore"] svg circle:last-child, [data-visualcompletion="ignore"] svg image[href*="read"]');
+      for (const el of readTicks) { el.style.setProperty('opacity', '0', 'important'); }
+      const activeStatus = document.querySelectorAll('[aria-label*="Active"], [aria-label*="active now"]');
+      for (const el of activeStatus) { el.style.setProperty('display', 'none', 'important'); }
+    }
+    if (host.includes('instagram.com')) {
+      const seenIndicators = document.querySelectorAll('[aria-label*="Seen"], [aria-label*="seen"], [class*="seen"]');
+      for (const el of seenIndicators) { el.style.setProperty('display', 'none', 'important'); }
+      const typingIndicators = document.querySelectorAll('[class*="typing"], [class*="typing-indicator"], [data-testid*="typing"]');
+      for (const el of typingIndicators) { el.style.setProperty('display', 'none', 'important'); }
+      const activityStatus = document.querySelectorAll('[aria-label*="Active"], [aria-label*="active now"], [class*="active-status"]');
+      for (const el of activityStatus) { el.style.setProperty('display', 'none', 'important'); }
     }
   }
 
