@@ -176,6 +176,13 @@ a:hover { text-decoration:underline; }
     <div id="cleanupStatus" style="font-size:10px;color:#888"></div>
   </div>
   <div class="card">
+    <h3>&#x1F50E; Extension Risk Audit</h3>
+    <div style="font-size:11px;color:#555;margin-bottom:8px;line-height:1.5">Scans installed extensions for risky permissions (native messaging, host access, all-urls, etc.) and flags dangerous combinations.</div>
+    <button class="btn btn-primary" id="scanExtensionsBtn">&#x1F50D; Scan Now</button>
+    <span id="extensionAuditStatus" style="font-size:11px;color:#888;margin-left:8px"></span>
+    <div id="extensionAuditResults" style="margin-top:8px;max-height:400px;overflow-y:auto"></div>
+  </div>
+  <div class="card">
     <h3>&#x1F4E5; Import / Export Settings</h3>
     <div style="display:flex;gap:8px">
       <button class="btn btn-primary" id="exportSettingsBtn">Export Settings</button>
@@ -288,6 +295,14 @@ a:hover { text-decoration:underline; }
            <li><strong>Video Redirect Guard</strong> — Prevents hidden links in video players from opening tabs</li>
            <li><strong>HTTPS Enforcement</strong> — Upgrades HTTP connections to HTTPS on major sites</li>
            <li><strong>Password Leak Check</strong> — Auto-checks passwords against known breaches (HIBP)</li>
+           <li><strong>GenAI Data Leak Prevention</strong> — Warns when sending sensitive data to AI chatbots</li>
+           <li><strong>Social Platform Ad Removal</strong> — Removes sponsored posts on Instagram, Twitter, LinkedIn</li>
+           <li><strong>Twitch Ad Blocking</strong> — Blocks ad overlays and banners on Twitch</li>
+           <li><strong>Gmail Ad Blocking</strong> — Removes promoted emails and sidebar ads in Gmail</li>
+           <li><strong>Defacement Detection</strong> — Detects possible site defacement/hacking</li>
+           <li><strong>Phone Scam Detection</strong> — Detects phone scam tactics on pages</li>
+           <li><strong>Extension Risk Audit</strong> — Scans installed extensions for dangerous permissions</li>
+           <li><strong>Website Privacy Score</strong> — Grades sites A-F based on tracker count and security</li>
            <li><strong>Filter Log CSV Export</strong> — Downloads filter log as CSV file</li>
            <li><strong>Notification Batching</strong> — Queues and batches notifications to reduce noise</li>
            <li><strong>Tracker Map Limits</strong> — Automatically limits tracker map size</li>

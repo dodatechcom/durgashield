@@ -25,7 +25,10 @@ const FEATURES = [
   { id:'cc-gambling', icon:'&#x1F3B0;', bg:'#ff6b35', label:'Gambling Block', desc:'Blocks online gambling & betting sites', cat:'Blocking' },
   { id:'cc-violence', icon:'&#x2620;', bg:'#343a40', label:'Violence & Hate Block', desc:'Blocks violent & hate speech content', cat:'Blocking' },
   { id:'videoRedirect', icon:'&#x25B6;', bg:'#e94560', label:'Video Redirect Guard', desc:'Prevents hidden links in video players from opening new tabs', cat:'Blocking' },
-  { id:'httpsEnforce', icon:'HT', bg:'#28a745', label:'HTTPS Enforcement', desc:'Upgrades HTTP connections to HTTPS on major sites', cat:'Security' }
+  { id:'httpsEnforce', icon:'HT', bg:'#28a745', label:'HTTPS Enforcement', desc:'Upgrades HTTP connections to HTTPS on major sites', cat:'Security' },
+  { id:'aiDlp', icon:'AI', bg:'#6f42c1', label:'GenAI Data Leak Prevention', desc:'Warns when sending sensitive data (SSN, passwords, API keys) to AI chatbots', cat:'Privacy' },
+  { id:'defacementDetect', icon:'DF', bg:'#dc3545', label:'Defacement Detection', desc:'Detects possible site defacement/hacking', cat:'Security' },
+  { id:'phoneScamDetect', icon:'PH', bg:'#e94560', label:'Phone Scam Detection', desc:'Detects phone scam tactics on pages', cat:'Security' }
 ];
 
 let config = {};
@@ -854,6 +857,72 @@ async function renderCDNReplacement() {
   }
 }
 
+/* ---------- Extension Risk Audit ---------- */
+async function renderExtensionAudit(results) {
+  var el = document.getElementById('extensionAuditResults');
+  if (!el) return;
+  if (!results || results.error) {
+    el.innerHTML = '<div class="empty-state">' + (results ? results.error : 'No results') + '</div>';
+    return;
+  }
+  if (results.length === 0) {
+    el.innerHTML = '<div class="empty-state">No extensions found to audit.</div>';
+    return;
+  }
+  var criticalCount = results.filter(function(e) { return e.riskLevel === 'critical'; }).length;
+  var highCount = results.filter(function(e) { return e.riskLevel === 'high'; }).length;
+  var mediumCount = results.filter(function(e) { return e.riskLevel === 'medium'; }).length;
+  var html = '<div style="margin-bottom:8px;font-size:11px;color:#888">' +
+    '<span style="color:#dc3545;font-weight:600">' + criticalCount + ' critical</span> &middot; ' +
+    '<span style="color:#e94560;font-weight:600">' + highCount + ' high</span> &middot; ' +
+    '<span style="color:#ffc107;font-weight:600">' + mediumCount + ' medium</span> &middot; ' +
+    '<span style="color:#28a745;font-weight:600">' + (results.length - criticalCount - highCount - mediumCount) + ' low</span> &middot; ' +
+    results.length + ' total extensions';
+  html += '</div>';
+  for (var i = 0; i < results.length; i++) {
+    var r = results[i];
+    var riskColors = { critical:'#dc3545', high:'#e94560', medium:'#ffc107', low:'#28a745' };
+    var color = riskColors[r.riskLevel] || '#888';
+    html += '<div style="display:flex;align-items:flex-start;gap:6px;padding:5px 0;border-bottom:1px solid #eee;font-size:11px">' +
+      '<span style="width:10px;height:10px;border-radius:50%;background:' + color + ';flex-shrink:0;margin-top:2px"></span>' +
+      '<div style="flex:1;min-width:0">' +
+      '<div style="font-weight:600;color:#333;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + escapeHtml(r.name) + ' <span style="font-weight:400;color:#888">v' + escapeHtml(r.version) + '</span></div>';
+    if (r.riskLevel === 'critical' || r.riskLevel === 'high') {
+      if (r.highRiskPerms && r.highRiskPerms.length > 0) {
+        html += '<div style="color:#dc3545;font-size:10px;margin-top:2px">High risk: ' + r.highRiskPerms.join(', ') + '</div>';
+      }
+      if (r.hasAllHosts) {
+        html += '<div style="color:#e94560;font-size:10px">Access to all websites (&lt;all_urls&gt;)</div>';
+      }
+    }
+    html += '<div style="color:#888;font-size:10px">' + (r.permissions ? r.permissions.length + ' permissions' : '0 permissions') + ' &middot; ' + (r.hostPermissions ? r.hostPermissions.length + ' host patterns' : '0 host patterns') + '</div>';
+    html += '</div></div>';
+  }
+  el.innerHTML = html;
+}
+function escapeHtml(str) {
+  if (!str) return '';
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+async function renderPrivacyScore() {
+  try {
+    var tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tabs[0] || !tabs[0].url) return;
+    var result = await chrome.runtime.sendMessage({ type: 'getPrivacyScore', url: tabs[0].url });
+    if (!result) return;
+    var ring = document.getElementById('privacyScoreRing');
+    if (!ring) return;
+    var gradeColors = { A:'#28a745', B:'#17a2b8', C:'#ffc107', D:'#e94560', F:'#dc3545' };
+    var gradeTexts = { A:'Excellent', B:'Good', C:'Fair', D:'Poor', F:'Critical' };
+    ring.textContent = result.grade;
+    ring.style.background = 'conic-gradient(' + (gradeColors[result.grade] || '#888') + ' ' + result.score + '%, #e0e0e0 ' + result.score + '%)';
+    ring.style.color = gradeColors[result.grade] || '#888';
+    var textEl = ring.nextElementSibling;
+    if (textEl) textEl.textContent = gradeTexts[result.grade] || 'Unknown';
+  } catch (e) {}
+}
+
 async function init() {
   try {
     await loadConfig();
@@ -867,6 +936,37 @@ async function init() {
     await renderAdvanced();
     await renderCDNReplacement();
     startLogRefresh();
+    renderPrivacyScore();
+
+    /* Extension audit button */
+    var scanBtn = document.getElementById('scanExtensionsBtn');
+    if (scanBtn) {
+      scanBtn.onclick = async function() {
+        var statusEl = document.getElementById('extensionAuditStatus');
+        var resultsEl = document.getElementById('extensionAuditResults');
+        if (statusEl) statusEl.textContent = 'Scanning...';
+        scanBtn.disabled = true;
+        try {
+          var results = await chrome.runtime.sendMessage({ type: 'scanExtensions' });
+          if (results && results.error) {
+            if (statusEl) statusEl.textContent = 'Error: ' + results.error;
+          } else {
+            if (statusEl) statusEl.textContent = 'Last scan: ' + new Date().toLocaleTimeString();
+            renderExtensionAudit(results);
+          }
+        } catch (e) {
+          if (statusEl) statusEl.textContent = 'Error: ' + e.message;
+        }
+        scanBtn.disabled = false;
+      };
+      chrome.runtime.sendMessage({ type: 'getExtensionAudit' }).then(function(results) {
+        if (results && results.length > 0) {
+          renderExtensionAudit(results);
+          var statusEl = document.getElementById('extensionAuditStatus');
+          if (statusEl) statusEl.textContent = 'Last scan: cached (' + results.length + ' extensions)';
+        }
+      });
+    }
   } catch(e) {
     console.error('DurgaShield init error:', e);
     document.body.innerHTML += '<div style="background:#dc3545;color:white;padding:12px;margin:12px;border-radius:6px;font-size:13px">Error: ' + e.message + '</div>';

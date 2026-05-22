@@ -25,9 +25,9 @@ A comprehensive Firefox security extension using Manifest V3. Blocks ads, popups
 - Sites continue to function because local copies are served instead of blocking
 
 ### Ad Blocking
-- **Network-level** (declarativeNetRequest): 290+ rules covering major ad networks — DoubleClick, Google Ads/Syndication, Facebook/Meta Ads, Amazon Ads, Taboola, Outbrain, ad exchanges (OpenX, AppNexus, Rubicon, PubMatic), analytics (Google Analytics, Mixpanel, Amplitude, FullStory, LuckyOrange, Heap, Segment, New Relic), social media pixels (Twitter, TikTok, Snapchat, Instagram, LinkedIn, Reddit, Pinterest), and tracking domains
+- **Network-level** (declarativeNetRequest): 290+ rules covering major ad networks — DoubleClick, Google Ads/Syndication, Facebook/Meta Ads, Amazon Ads, Taboola, Outbrain, ad exchanges (OpenX, AppNexus, Rubicon, PubMatic), analytics (Google Analytics, Mixpanel, Amplitude, FullStory, LuckyOrange, Heap, Segment, New Relic), social media pixels (Twitter, TikTok, Snapchat, Instagram, LinkedIn, Reddit, Pinterest), and tracking domains. Covers push notification ad networks (`quge5.com`), header bidding wrappers (`ascendeum-hb-*`), ad verification (`confiant-integrations.net`), and ad injectors (`html-load.com`)
 - **YouTube ads**: Removes ad DOM elements (`ytd-ad-slot-renderer`, `ytd-display-ad-renderer`, `ytd-promoted-video-renderer`, `#masthead-ad`, `#merch-shelf`, `ytp-ad-module`). Auto-skips video ads by clicking the skip button as soon as it appears. Mutes and speeds up unskippable ads (16x). Runs on a delayed interval to avoid interfering with player initialization.
-- **DOM cleanup**: Content script removes ad elements injected after page load, including Google AdSense, ad iframes, and banners
+- **DOM cleanup**: Content script removes ad elements injected after page load, including Google AdSense, ad iframes, and banners. Also removes ads on **Twitch** (ad overlays, player ads, prerolls), **Gmail** (promoted emails, sidebar promotions), **Instagram** (sponsored posts), **Twitter/X** (promoted tweets), and **LinkedIn** (sponsored feed items)
 - **Popup blocker**: Intercepts `window.open()` calls targeting ad/popup domains
 
 ### Privacy Dashboard
@@ -43,6 +43,37 @@ A comprehensive Firefox security extension using Manifest V3. Blocks ads, popups
 - **Removes blank space** — collapses detected containers to zero height, padding, and margin, eliminating the white rectangles and gaps left behind by blocked ads
 - **Safe** — only targets containers with no visible content (no images, no iframes, no inline scripts)
 - **Runs on DOM mutations** — catches dynamically injected ad containers
+
+### GenAI Data Leak Prevention
+- **AI chat platform support**: Detects sensitive data typed into ChatGPT, Gemini, Claude, Copilot, DeepSeek, Perplexity, and other AI chatbots
+- **Pattern detection**: Scans input for credit card numbers (PAN), SSN/passport numbers, API keys/secrets (GitHub tokens, AWS keys, etc.), passwords, email addresses, and dates of birth
+- **Real-time warning**: Shows a prominent notification when sensitive data is detected being entered or sent to an AI platform
+- **XHR/fetch monitoring**: Also checks fetch request bodies for leaked sensitive data
+- **Opt-in**: Disabled by default; enable via the **GenAI Data Leak Prevention** toggle in Features tab
+
+### Extension Risk Audit
+- **Permission analysis**: Scans all installed extensions and categorizes their risk level (critical/high/medium/low) based on requested permissions
+- **Dangerous detection**: Flags extensions with `nativeMessaging`, `debugger`, `proxy`, `history`, `<all_urls>` host access, and other high-risk capabilities
+- **Risk scoring**: Critical = high-risk permissions + all-sites access; High = high-risk permissions or all-sites + medium permissions
+- **On-demand scan**: "Scan Now" button in the Advanced tab; results include extension name, version, risk level, and highlighted dangerous permissions
+- **Persistent results**: Last scan results cached and displayed on page load
+
+### Defacement Detection
+- **Known site monitoring**: Checks page title on major sites (Google, Facebook, YouTube, Twitter, GitHub, Amazon, etc.) for defacement indicators
+- **Title analysis**: Scans for terms like "hacked", "deface", "pwned", "owned", "breach" in the page title
+- **Immediate warning**: Shows a warning banner if defacement is suspected
+- **Opt-in**: Disabled by default; enable via the **Defacement Detection** toggle in Features tab
+
+### Phone Scam Detection
+- **Scam keyword scanning**: Analyzes page content for common phone scam phrases ("call now", "urgent", "you have won", "government grant", "irs refund", etc.)
+- **Multi-match threshold**: Only triggers when 3+ distinct scam patterns are detected (reduces false positives)
+- **Warning**: Shows a clear warning to not call any phone numbers on the page
+- **Opt-in**: Disabled by default; enable via the **Phone Scam Detection** toggle in Features tab
+
+### Website Privacy Score
+- **A-F grading**: Calculates a privacy score (0-100) for the current site based on HTTPS status and detected tracker count
+- **Conic gradient ring**: Visual grade displayed as a colored ring in the Dashboard tab (green=A, blue=B, yellow=C, orange=D, red=F)
+- **Algorithm**: HTTPS = +80 base; each tracker deducts 5 points (max -40)
 
 ### Anti-Anti-Adblock System
 - **Overlay detection** — scans for "disable adblock to continue" walls using 30+ selector patterns (`adblock*`, `ad-detected*`, `adblocker-wall*`, `adblock-overlay*`, `adblock-modal*`, etc.)
@@ -157,7 +188,7 @@ A comprehensive Firefox security extension using Manifest V3. Blocks ads, popups
 
 ### Disable Specific Rules
 - Enter any DNR rule ID to disable it (removed from dynamic rules before applying)
-- Static ruleset IDs: 1001-1294 (285 rules in ads), 100000-100132 (malware), 200001-200124 (crypto), 300001-300172 (phishing)
+- Static ruleset IDs: 1001-1298 (289 rules in ads), 100000-100132 (malware), 200001-200124 (crypto), 300001-300172 (phishing)
 - Dynamic rule IDs: 500000+ (filter lists), 700000+ (JS blocking), 701000+ (custom rules)
 - Disabled IDs stored in `durgashield_disabled_rules`
 
@@ -291,7 +322,7 @@ A comprehensive Firefox security extension using Manifest V3. Blocks ads, popups
 
 | Ruleset | Rule IDs | Rules | Purpose |
 |---|---|---|---|---|---|
-| `ads.json` (static) | 1001-1294 | 285 | Ad networks, trackers, social pixels, analytics |
+| `ads.json` (static) | 1001-1298 | 289 | Ad networks, trackers, social pixels, analytics |
 | `malware.json` (static) | 100000-100132 | 133 | Malware domains, ransomware, scams |
 | `crypto.json` (static) | 200001-200124 | 124 | Crypto miners, mining pools |
 | `phishing.json` (static) | 300001-300172 | 172 | Phishing domains, fake login pages |
@@ -362,7 +393,7 @@ durgashield/
 ├── donations.html         # Donations page
 ├── donations.js           # Donations page script
 ├── rules/
-│   ├── ads.json           # 285 ad blocking rules
+│   ├── ads.json           # 289 ad blocking rules
 │   ├── malware.json       # 133 malware blocking rules
 │   ├── crypto.json        # 124 crypto mining blocking rules
 │   ├── phishing.json      # 172 phishing blocking rules
@@ -411,6 +442,23 @@ Keep README.md updated when adding or modifying features.
 MIT
 
 ## Changelog
+
+### v1.0.9 — GenAI DLP, extension audit, social feed ads, Twitch/Gmail blocking (2026-05-21)
+- **GenAI Data Leak Prevention**: Detects and warns when sensitive data (credit cards, SSNs, passwords, API keys) is typed into ChatGPT, Gemini, Claude, Copilot, DeepSeek, and other AI chat platforms. Monitors inputs, fetch bodies, and blur events. Config toggle in Features tab (opt-in, disabled by default).
+- **Extension Risk Audit**: Scans all installed extensions via `chrome.management.getAll()` and categorizes risk (critical/high/medium/low) based on permission analysis. Flags `nativeMessaging`, `debugger`, `proxy`, `<all_urls>` access, and dangerous combinations. "Scan Now" button in Advanced tab with cached results.
+- **Social Platform Feed Ad Removal**: Removes sponsored/promoted posts on Instagram (Sponsored/Paid partnership labels), Twitter/X (Promoted/Ad labels), and LinkedIn (promoted feed items and sidebar ads). Runs on observer ticks and initial page load.
+- **Twitch Ad Blocking**: Hides ad overlays, player ads, prerolls, midrolls, ad iframes, and video ad containers on Twitch.
+- **Gmail Ad Blocking**: Removes promoted emails (aria-label "Ad"), sidebar promotions, and offer containers in Gmail.
+- **Defacement Detection**: Monitors page title on major sites for defacement indicators (hacked, deface, pwned, breach). Shows warning if detected. Opt-in, disabled by default.
+- **Phone Scam Detection**: Scans page content for common phone scam phrases (3+ match threshold). Shows warning. Opt-in, disabled by default.
+- **Website Privacy Score**: Calculates A-F grade for current site based on HTTPS status and tracker count. Displayed as conic gradient ring in Dashboard tab.
+- **`management` permission added**: Required for extension risk audit feature.
+- **Settings page updated**: Extension audit UI in Advanced tab; new features listed in About tab.
+
+### v1.0.8 — Additional ad network coverage, Urban Dictionary fix (2026-05-21)
+- **New DNR rules**: Added 4 block rules — `||quge5.com^` (1295, push notification ad network), `||html-load.com^` (1296, ad injection SDK), `||confiant-integrations.net^` (1297, ad verification), `||ascendeum-hb-urbandictionary.pages.dev^` (1298, header bidding wrapper)
+- **`.ad-panel` selector added**: Added to pre-emptive CSS and `removeAdElements()` to hide ad containers on Urban Dictionary and similar sites before they render
+- **Rule count updated**: ads.json now has 289 rules (1001-1298)
 
 ### v1.0.7 — Amazon checkout compatibility fix (2026-05-21)
 - **Amazon payment flow fix**: Added `excludedInitiatorDomains: ["amazon.in","amazon.com"]` to 4 `amazon-adsystem.com` DNR block rules (1012, 1014, 1291, 1292) — Amazon uses `amazon-adsystem.com` for fraud detection, checkout telemetry, and payment flow validation, not just ads

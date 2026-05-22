@@ -283,5 +283,9 @@
   {"id":1291,"priority":1,"action":{"type":"block"},"condition":{"urlFilter":"||c.amazon-adsystem.com^","resourceTypes":["script","xmlhttprequest"],"excludedInitiatorDomains":["amazon.in","amazon.com"]}},
   {"id":1292,"priority":1,"action":{"type":"block"},"condition":{"urlFilter":"||s.amazon-adsystem.com^","resourceTypes":["script","image","xmlhttprequest"],"excludedInitiatorDomains":["amazon.in","amazon.com"]}},
   {"id":1293,"priority":1,"action":{"type":"block"},"condition":{"urlFilter":"||dt.adsafeprotected.com^","resourceTypes":["xmlhttprequest"]}},
-  {"id":1294,"priority":1,"action":{"type":"block"},"condition":{"urlFilter":"||tracking.epicgames.com^","resourceTypes":["script","xmlhttprequest","ping"]}}
+  {"id":1294,"priority":1,"action":{"type":"block"},"condition":{"urlFilter":"||tracking.epicgames.com^","resourceTypes":["script","xmlhttprequest","ping"]}},
+  {"id":1295,"priority":1,"action":{"type":"block"},"condition":{"urlFilter":"||quge5.com^","resourceTypes":["script","image","xmlhttprequest","sub_frame"]}},
+  {"id":1296,"priority":1,"action":{"type":"block"},"condition":{"urlFilter":"||html-load.com^","resourceTypes":["script","image","xmlhttprequest","sub_frame"]}},
+  {"id":1297,"priority":1,"action":{"type":"block"},"condition":{"urlFilter":"||confiant-integrations.net^","resourceTypes":["script","xmlhttprequest"]}},
+  {"id":1298,"priority":1,"action":{"type":"block"},"condition":{"urlFilter":"||ascendeum-hb-urbandictionary.pages.dev^","resourceTypes":["script","xmlhttprequest"]}}
 ]

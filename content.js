@@ -2,7 +2,7 @@
   if (window._durgashield_loaded) return;
   window._durgashield_loaded = true;
 
-  const config = { ads: true, malware: true, crypto: true, phishing: true, popupBlocking: true, containerIsolation: true, searchAnnotations: true, metadataCleanup: false, videoRedirect: false, stealth: false, enhancedTracking: false, xssProtection: false, clearClick: false };
+  const config = { ads: true, malware: true, crypto: true, phishing: true, popupBlocking: true, containerIsolation: true, searchAnnotations: true, metadataCleanup: false, videoRedirect: false, stealth: false, enhancedTracking: false, xssProtection: false, clearClick: false, aiDlp: false, defacementDetect: false, phoneScamDetect: false };
   let zapperActive = false;
   let jsBlocked = false;
 
@@ -13,7 +13,7 @@
   try {
     var hideStyle = document.createElement('style');
     hideStyle.id = 'dgs-instant-hide';
-    hideStyle.textContent = 'ins.adsbygoogle,amp-ad,google-ad,iframe[src*="doubleclick.net"],iframe[src*="googlesyndication.com"],.adsbygoogle[data-ad-status="unfilled"]{display:none!important}';
+    hideStyle.textContent = 'ins.adsbygoogle,amp-ad,google-ad,.ad-panel,iframe[src*="doubleclick.net"],iframe[src*="googlesyndication.com"],.adsbygoogle[data-ad-status="unfilled"]{display:none!important}';
     document.documentElement.appendChild(hideStyle);
   } catch (_e) {}
 
@@ -316,6 +316,9 @@
       if (isYouTube() && config.ads) startYouTubeAdSkip();
       if (isYouTube()) { detectYouTubeChannel(); setTimeout(checkYouTubeWhitelist, 2000); }
       if (!isGoogle) initPrivacyFeatures();
+      initGenAIDLP();
+      detectDefacement();
+      detectPhoneScams();
     } else {
       if (config.popupBlocking && !_isAmazonPayment) overrideWindowOpen();
       if (config.ads && !isYouTube() && !_isAmazonPayment) removeAdElements();
@@ -645,6 +648,7 @@
     if (config.ads && window.location.hostname.includes('facebook.com')) removeFacebookAds();
     if (config.ads && !isCryptoSite()) dismissInterstitials();
     if (config.metadataCleanup) setupMetadataCleanup();
+    if (config.ads) { blockTwitchAds(); blockGmailAds(); removeSocialFeedAds(); }
   }
 
   let videoRedirectActive = false;
@@ -708,7 +712,7 @@
   }
 
   function removeAdElements() {
-    const selectors = ['ins.adsbygoogle', 'amp-ad', 'google-ad', 'iframe[src*="doubleclick.net"]', 'iframe[src*="googlesyndication.com"]'];
+    const selectors = ['ins.adsbygoogle', 'amp-ad', 'google-ad', '.ad-panel', 'iframe[src*="doubleclick.net"]', 'iframe[src*="googlesyndication.com"]'];
     let count = 0;
     const elements = document.querySelectorAll(selectors.join(','));
     for (const el of elements) { el.style.setProperty('display', 'none', 'important'); count++; }
@@ -958,6 +962,7 @@
         if (isGoogle || isAmazon) return;
         if (config.ads && !isYouTube() && !isCryptoSite()) { removeAdElements(); bypassAntiAdblock(); }
         if (config.ads && !isYouTube() && !isSubFrame) removeAdPlaceholders();
+        if (config.ads) { blockTwitchAds(); blockGmailAds(); removeSocialFeedAds(); }
         if (config.crypto && !isCryptoSite() && !isSubFrame) detectCryptoMining();
         if (config.containerIsolation && !isFacebookOrigin()) blockFacebookEmbeds();
         if (config.neverConsent !== false && !isSubFrame) handleCookieConsent();
@@ -2308,6 +2313,223 @@
         chrome.runtime.sendMessage({ type: 'autoCheckPassword', password: pw.value }, function(r) {});
       }
     }, true);
+  }
+
+  /* ---------- GenAI Data Leak Prevention ---------- */
+  const AI_CHAT_DOMAINS = ['chatgpt.com','chat.openai.com','gemini.google.com','claude.ai','copilot.microsoft.com','deepseek.com','perplexity.ai','pi.ai','character.ai','poe.com','inflection.ai'];
+  function initGenAIDLP() {
+    if (config.aiDlp !== true) return;
+    const host = hostname();
+    if (!AI_CHAT_DOMAINS.some(d => host === d || host.endsWith('.' + d))) return;
+    const sensitivePatterns = [
+      { regex: /\b(?:\d[ -]*?){13,16}\b/g, label: 'Credit card number' },
+      { regex: /\b\d{3}-?\d{2}-?\d{4}\b/g, label: 'Social Security Number (US SSN)' },
+      { regex: /\b[A-Z]{2}\d{6}[A-Z\d]?\b/g, label: 'Passport number' },
+      { regex: /\b\d{2}[.-]?\d{2}[.-]?\d{4}\b/g, label: 'Date of birth' },
+      { regex: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g, label: 'Email address' },
+      { regex: /\bsk[_\-]live[_\-][A-Za-z0-9]+\b|\bghp_[A-Za-z0-9]+\b|\bgho_[A-Za-z0-9]+\b|\bghu_[A-Za-z0-9]+\b|\bAKIA[0-9A-Z]{16}\b/g, label: 'API key / secret' },
+      { regex: /\b(?:password|passwd|pwd)\s*[:=]\s*['"]?[^\s'"]{4,}/gi, label: 'Password' },
+    ];
+    let warned = false;
+    function checkInput(text) {
+      if (warned || !text || text.length < 8) return;
+      for (const p of sensitivePatterns) {
+        const matches = text.match(p.regex);
+        if (matches && matches.length > 0) {
+          warned = true;
+          showWarning('GenAI Data Leak Prevention: ' + p.label + ' detected! Sending personal data to AI may compromise your privacy.');
+          chrome.runtime.sendMessage({ type: 'incrementBlocked', category: 'privacy', count: matches.length });
+          return true;
+        }
+      }
+      return false;
+    }
+    const textInputs = document.querySelectorAll('textarea, input[type="text"], input[type="search"], div[contenteditable="true"]');
+    for (const el of textInputs) {
+      el.addEventListener('input', function() {
+        checkInput(this.value || this.textContent || '');
+      });
+      el.addEventListener('blur', function() {
+        checkInput(this.value || this.textContent || '');
+      });
+    }
+    const origFetch = window.fetch;
+    window.fetch = function(url, opts) {
+      const urlStr = typeof url === 'string' ? url : (url ? url.url || '' : '');
+      if (AI_CHAT_DOMAINS.some(d => urlStr.includes(d)) && opts && opts.body && typeof opts.body === 'string') {
+        checkInput(opts.body);
+      }
+      return origFetch.apply(this, arguments);
+    };
+  }
+
+  /* ---------- Social Platform Feed Ad Removal (Instagram / Twitter / LinkedIn) ---------- */
+  function removeSocialFeedAds() {
+    const host = hostname();
+    let count = 0;
+
+    /* Instagram sponsored posts */
+    if (host === 'instagram.com' || host.endsWith('.instagram.com')) {
+      const articles = document.querySelectorAll('article[role="presentation"]');
+      for (const art of articles) {
+        const spans = art.querySelectorAll('span');
+        for (const s of spans) {
+          if (s.textContent.trim() === 'Sponsored' || s.textContent.trim() === 'Paid partnership') {
+            art.style.display = 'none';
+            count++;
+            break;
+          }
+        }
+        if (count > 0) break;
+      }
+      const promoted = document.querySelectorAll('div[style*="display: flex"][role="presentation"] a[href*="/ads/"]');
+      for (const el of promoted) {
+        const feedItem = el.closest('article, div[style*="margin-bottom"]');
+        if (feedItem) { feedItem.style.display = 'none'; count++; }
+      }
+    }
+
+    /* Twitter/X promoted tweets */
+    if (host === 'x.com' || host === 'twitter.com' || host.endsWith('.x.com') || host.endsWith('.twitter.com')) {
+      const tweets = document.querySelectorAll('article[data-testid="tweet"]');
+      for (const t of tweets) {
+        const span = t.querySelector('div[data-testid="placementTracking"]');
+        if (span) { t.style.display = 'none'; count++; continue; }
+        const labels = t.querySelectorAll('span');
+        for (const s of labels) {
+          if (s.textContent.trim() === 'Promoted' || s.textContent.trim() === 'Ad') {
+            t.style.display = 'none'; count++; break;
+          }
+        }
+      }
+      const sidebarAds = document.querySelectorAll('aside[aria-label="Who to follow"] div[data-testid="UserCell"]');
+      for (const el of sidebarAds) {
+        const parent = el.closest('section');
+        if (parent) { parent.style.display = 'none'; count++; }
+      }
+    }
+
+    /* LinkedIn sponsored posts */
+    if (host === 'linkedin.com' || host.endsWith('.linkedin.com')) {
+      const feedItems = document.querySelectorAll('div.feed-shared-update-v2, li.feed-shared-update-v2');
+      for (const item of feedItems) {
+        const spans = item.querySelectorAll('span');
+        for (const s of spans) {
+          const txt = s.textContent.trim().toLowerCase();
+          if (txt === 'promoted' || txt === 'sponsored' || txt.includes('promoted')) {
+            item.style.display = 'none'; count++; break;
+          }
+        }
+      }
+      const sidebarAds2 = document.querySelectorAll('aside div[class*="ad"], aside div[id*="ad"]');
+      for (const el of sidebarAds2) { el.style.display = 'none'; count++; }
+    }
+
+    if (count > 0) {
+      queueBlockCount(count);
+      chrome.runtime.sendMessage({ type: 'incrementBlocked', category: 'ads', count: count });
+    }
+  }
+
+  /* ---------- Twitch Ad Blocking ---------- */
+  function blockTwitchAds() {
+    const host = hostname();
+    if (host !== 'twitch.tv' && !host.endsWith('.twitch.tv')) return;
+    const adBanners = document.querySelectorAll(
+      'div[class*="ad-overlay"], div[class*="player-ad"], div[class*="ad-unit"], ' +
+      'div[data-a-target="video-ad"], div[class*="video-ad"], ' +
+      'div[class*="preroll"], div[class*="midroll"], div[class*="ad-container"], ' +
+      'div[class*="ad-display"], div[class*="ad-controls"], div[aria-label*="ad"]'
+    );
+    for (const el of adBanners) { el.style.display = 'none'; }
+    const adIframes = document.querySelectorAll('iframe[src*="ad"], iframe[src*="doubleclick"], iframe[src*="googlesyndication"]');
+    for (const f of adIframes) { f.style.display = 'none'; }
+    const player = document.querySelector('video');
+    if (player) {
+      const adOverlay = player.closest('div[class*="video-player"]');
+      if (adOverlay) {
+        const overlays = adOverlay.querySelectorAll('div[class*="overlay"], div[class*="ad-overlay"]');
+        for (const o of overlays) { o.style.display = 'none'; }
+      }
+    }
+    const adCount = adBanners.length + adIframes.length;
+    if (adCount > 0) {
+      queueBlockCount(adCount);
+      chrome.runtime.sendMessage({ type: 'incrementBlocked', category: 'ads', count: adCount });
+    }
+  }
+
+  /* ---------- Gmail Ad Blocking ---------- */
+  function blockGmailAds() {
+    const host = hostname();
+    if (host !== 'mail.google.com') return;
+    const adLabels = document.querySelectorAll(
+      'div[aria-label*="Ad"], div[class*="ads"], div[class*="ad-container"], ' +
+      'table[class*="ads"], tr[class*="ad"], td[class*="ad"], ' +
+      'div[class*="sponsored"], div[class*="promotion"], div[class*="promo"]'
+    );
+    for (const el of adLabels) { el.style.display = 'none'; }
+    const sidePromos = document.querySelectorAll('div[class*="promo"], div[id*="promo"], div[class*="offer"], div[id*="offer"]');
+    for (const el of sidePromos) { el.style.display = 'none'; }
+    const adCount2 = adLabels.length + sidePromos.length;
+    if (adCount2 > 0) {
+      queueBlockCount(adCount2);
+      chrome.runtime.sendMessage({ type: 'incrementBlocked', category: 'ads', count: adCount2 });
+    }
+  }
+
+  /* ---------- Defacement Detection ---------- */
+  function detectDefacement() {
+    if (config.defacementDetect !== true) return;
+    const host = hostname();
+    const knownPages = {
+      'google.com': ['/search','/webhp'],
+      'facebook.com': ['/','/login'],
+      'youtube.com': ['/','/feed'],
+      'twitter.com': ['/','/home'],
+      'x.com': ['/','/home'],
+      'github.com': ['/','/login'],
+      'amazon.com': ['/','/gp'],
+      'reddit.com': ['/','/r'],
+      'wikipedia.org': ['/wiki'],
+      'linkedin.com': ['/','/feed'],
+      'instagram.com': ['/','/accounts'],
+      'whatsapp.com': ['/','/send'],
+      'microsoft.com': ['/','/en-us'],
+      'apple.com': ['/','/us'],
+    };
+    const matched = Object.entries(knownPages).find(([d]) => host === d || host.endsWith('.' + d));
+    if (!matched) return;
+    const titleLower = document.title.toLowerCase();
+    const suspiciousTitlePatterns = ['hacked','deface','pwned','owned','cracked','by ','hack','breach','security compromised','cyber attack'];
+    for (const pat of suspiciousTitlePatterns) {
+      if (titleLower.includes(pat) && !titleLower.includes('prevent') && !titleLower.includes('protect')) {
+        chrome.runtime.sendMessage({ type: 'incrementBlocked', category: 'malware', count: 1 });
+        showWarning('Possible site defacement detected! This page may have been compromised. Title contains: "' + document.title + '"');
+        break;
+      }
+    }
+  }
+
+  /* ---------- Phone Scam Detection ---------- */
+  function detectPhoneScams() {
+    if (config.phoneScamDetect !== true) return;
+    const bodyText = document.body ? document.body.innerText.toLowerCase() : '';
+    const scamPatterns = [
+      'call now','call this number','call immediately','call customer care',
+      'call toll free','call 24/7','act now','limited time offer','you have won',
+      'congratulations you won','claim your prize','free gift','urgent call',
+      'your account will be closed','your computer has a virus','windows support',
+      'microsoft certified','apple certified','refund department','processing fee',
+      'govt grant','government grant','free government','social security award',
+      'irs refund','tax refund','unclaimed property','inheritance',
+      'you are the lucky winner','final warning','legal action will be taken',
+    ];
+    const found = scamPatterns.filter(s => bodyText.includes(s));
+    if (found.length > 2) {
+      chrome.runtime.sendMessage({ type: 'incrementBlocked', category: 'malware', count: 1 });
+      showWarning('Potential phone scam detected! This page uses common scam tactics. Do not call any numbers listed.');
+    }
   }
 
 })();

@@ -35,7 +35,8 @@ const DEFAULT_CONFIG = {
   neverConsent: true, enhancedTracking: false, xssProtection: false, clearClick: false, abe: true, securePayment: true,
   downloadScan: true, social: true, annoyance: true, cdnReplacement: true,
   metadataCleanup: false, searchAnnotations: true, videoRedirect: false, httpsEnforce: true, passwordLeakCheck: true,
-  'cc-adult': false, 'cc-gambling': false, 'cc-violence': false
+  'cc-adult': false, 'cc-gambling': false, 'cc-violence': false,
+  aiDlp: false, defacementDetect: false, phoneScamDetect: false
 };
 
 const CONTAINER_NAME = 'Social Media';
@@ -1346,6 +1347,28 @@ case 'getYouTubeWhitelist':
     case 'exportFilterLog':
       exportFilterLog().then(sendResponse);
       return true;
+    case 'scanExtensions':
+      scanExtensions().then(sendResponse);
+      return true;
+    case 'getExtensionAudit':
+      getExtensionAudit().then(sendResponse);
+      return true;
+    case 'getPrivacyScore':
+      (async () => {
+        const trackers = await getDetectedTrackers();
+        const https = message.url ? message.url.startsWith('https://') : true;
+        const trackerCount = trackers ? trackers.length : 0;
+        let score = 100;
+        if (!https) score -= 20;
+        score -= Math.min(trackerCount * 5, 40);
+        let grade = 'A';
+        if (score <= 20) grade = 'F';
+        else if (score <= 40) grade = 'D';
+        else if (score <= 60) grade = 'C';
+        else if (score <= 80) grade = 'B';
+        sendResponse({ score, grade, trackerCount, https });
+      })();
+      return true;
   }
 });
 
@@ -1728,4 +1751,56 @@ try {
   chrome.alarms.create('cdnFileUpdate', { periodInMinutes: 1440 });
 } catch (e) {
   console.warn('DurgaShield: cdn alarm error:', e);
+}
+
+/* ---------- Extension Risk Auditing ---------- */
+const EXTENSION_RISK_KEY = 'durgashield_extension_audit';
+async function scanExtensions() {
+  try {
+    if (!chrome.management || !chrome.management.getAll) return { error: 'management API not available' };
+    const all = await chrome.management.getAll();
+    const results = [];
+    const highRiskPerms = ['nativeMessaging','debugger','proxy','privacy','history','sessions','tabs','bookmarks','downloads','clipboardRead','clipboardWrite','identity','identity.email'];
+    const mediumRiskPerms = ['cookies','webRequest','webRequestBlocking','notifications','alarms','storage','unlimitedStorage','geolocation'];
+    for (const ext of all) {
+      if (ext.id === chrome.runtime.id) continue;
+      if (ext.type !== 'extension') continue;
+      const perms = ext.permissions || [];
+      const hostPerms = ext.hostPermissions || [];
+      const highRisk = perms.filter(p => highRiskPerms.includes(p));
+      const mediumRisk = perms.filter(p => mediumRiskPerms.includes(p));
+      const allHosts = hostPerms.some(h => h === '<all_urls>' || h === 'http://*/*' || h === 'https://*/*' || h === '*://*/*');
+      let riskLevel = 'low';
+      if (highRisk.length > 0 && allHosts) riskLevel = 'critical';
+      else if (highRisk.length > 0) riskLevel = 'high';
+      else if (mediumRisk.length > 0 && allHosts) riskLevel = 'high';
+      else if (mediumRisk.length > 0) riskLevel = 'medium';
+      else if (allHosts) riskLevel = 'medium';
+      results.push({
+        id: ext.id,
+        name: ext.name,
+        version: ext.version,
+        enabled: ext.enabled,
+        riskLevel: riskLevel,
+        permissions: perms,
+        hostPermissions: hostPerms,
+        highRiskPerms: highRisk,
+        mediumRiskPerms: mediumRisk,
+        hasAllHosts: allHosts,
+        description: ext.description ? ext.description.substring(0, 200) : ''
+      });
+    }
+    results.sort((a, b) => {
+      const order = { critical: 0, high: 1, medium: 2, low: 3 };
+      return (order[a.riskLevel] || 99) - (order[b.riskLevel] || 99);
+    });
+    await chrome.storage.local.set({ [EXTENSION_RISK_KEY]: results });
+    return results;
+  } catch (e) {
+    return { error: e.message };
+  }
+}
+async function getExtensionAudit() {
+  const r = await chrome.storage.local.get(EXTENSION_RISK_KEY);
+  return r[EXTENSION_RISK_KEY] || [];
 }

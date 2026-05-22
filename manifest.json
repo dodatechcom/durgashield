@@ -12,7 +12,8 @@
     "notifications",
     "tabs",
     "contextualIdentities",
-    "scripting"
+    "scripting",
+    "management"
   ],
   "optional_permissions": [
     "cookies",
