@@ -7,10 +7,31 @@ function updateUI(enabled) {
   dot.className = 'dot ' + (enabled ? 'active' : 'paused');
 }
 
+const TRUSTED_DOMAINS = ['bank.in', 'github.com', 'github.io', 'githubusercontent.com', 'github.githubassets.com', 'githubstatus.com', 'coinmarketcap.com', 'bitget.com', 'coingecko.com', 'tvsmotor.com', 'amazon.in', 'amazon.com'];
+
 function loadStats() {
   chrome.storage.local.get('durgashield_stats', (r) => {
     const stats = r.durgashield_stats || { today: 0 };
     document.getElementById('blockedToday').textContent = stats.today;
+  });
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    if (!tabs[0] || !tabs[0].url) return;
+    try {
+      const host = new URL(tabs[0].url).hostname.replace(/^www\./, '');
+      const trusted = TRUSTED_DOMAINS.some(d => host === d || host.endsWith('.' + d));
+      var el = document.getElementById('trustedBadge');
+      if (!el) {
+        el = document.createElement('span');
+        el.id = 'trustedBadge';
+        document.querySelector('.status-row').appendChild(el);
+      }
+      if (trusted) {
+        el.textContent = ' \u2713 Trusted';
+        el.style.cssText = 'color:#28a745;font-weight:600';
+      } else {
+        el.textContent = '';
+      }
+    } catch (e) {}
   });
 }
 

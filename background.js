@@ -1575,7 +1575,8 @@ const ALLOWED_SITES = [
   { domain: 'amazon.com', desc: 'Amazon US' },
   { domain: 'payments.amazon.in', desc: 'Amazon Payments India' },
   { domain: 'siege-amazon.com', desc: 'Amazon Siege (payment security)' },
-  { domain: 'payments.amazon.dev', desc: 'Amazon Payments Dev (payment iframes)' }
+  { domain: 'payments.amazon.dev', desc: 'Amazon Payments Dev (payment iframes)' },
+  { domain: 'bank.in', desc: 'Bank.in' }
 ];
 function buildSiteAllowRules() {
   return ALLOWED_SITES.flatMap((site, i) => [
