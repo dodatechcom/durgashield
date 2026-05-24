@@ -143,6 +143,23 @@ async function renderDashboard() {
         $('protectionBadge').style.background = '#dc3545';
       }
     }
+    if ($('protectionBadge2')) {
+      $('protectionBadge2').textContent = isEnabled ? 'Active' : 'Paused';
+      $('protectionBadge2').style.background = isEnabled ? '#28a745' : '#dc3545';
+    }
+    if ($('dashboardPauseToggle')) {
+      $('dashboardPauseToggle').checked = isEnabled;
+      $('dashboardPauseToggle').onchange = function() {
+        var enabled2 = this.checked;
+        chrome.storage.local.set({ durgashield_enabled: enabled2 });
+        chrome.tabs.query({}, function(tabs) {
+          for (var t = 0; t < tabs.length; t++) {
+            try { chrome.tabs.sendMessage(tabs[t].id, { type: 'setEnabled', enabled: enabled2 }); } catch (e) {}
+          }
+        });
+        renderDashboard();
+      };
+    }
     var r = await chrome.storage.local.get('durgashield_stats');
     var s = r.durgashield_stats || { total:0, today:0 };
     if ($('totalBlocked')) $('totalBlocked').textContent = s.total;

@@ -2,7 +2,7 @@
   if (window._durgashield_loaded) return;
   window._durgashield_loaded = true;
 
-  const config = { ads: true, malware: true, crypto: true, phishing: true, popupBlocking: true, containerIsolation: true, searchAnnotations: true, metadataCleanup: true, videoRedirect: true, stealth: true, enhancedTracking: true, xssProtection: true, clearClick: true, aiDlp: true, defacementDetect: true, phoneScamDetect: true, phishingLinkDetect: true, fbPrivacy: true };
+  const config = { ads: true, malware: true, crypto: true, phishing: true, popupBlocking: true, containerIsolation: true, searchAnnotations: true, metadataCleanup: false, videoRedirect: true, stealth: true, enhancedTracking: true, xssProtection: true, clearClick: true, aiDlp: true, defacementDetect: true, phoneScamDetect: true, phishingLinkDetect: true, fbPrivacy: true };
   let zapperActive = false;
   let jsBlocked = false;
 
@@ -315,7 +315,7 @@
       if (config.passwordLeakCheck !== false && !_isAmazonPayment) setupPasswordLeakCheck();
       if (isYouTube() && config.ads) startYouTubeAdSkip();
       if (isYouTube()) { detectYouTubeChannel(); setTimeout(checkYouTubeWhitelist, 2000); }
-      if (!isGoogle) initPrivacyFeatures();
+      if (!isGoogle && !isCryptoSite()) initPrivacyFeatures();
       initGenAIDLP();
       detectDefacement();
       detectPhoneScams();
@@ -961,7 +961,7 @@
       if (timer) return;
       timer = setTimeout(() => {
         timer = null;
-        if (isGoogle || isAmazon) return;
+        if (isGoogle || isAmazon || isCryptoSite()) return;
         if (config.ads && !isYouTube() && !isCryptoSite()) { removeAdElements(); bypassAntiAdblock(); }
         if (config.ads && !isYouTube() && !isSubFrame) removeAdPlaceholders();
         if (config.ads) { blockTwitchAds(); blockGmailAds(); removeSocialFeedAds(); blockStreamingAds(); }

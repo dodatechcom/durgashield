@@ -34,7 +34,7 @@ const DEFAULT_CONFIG = {
   popupBlocking: true, containerIsolation: true, cdn: true, stealth: true,
   neverConsent: true, enhancedTracking: true, xssProtection: true, clearClick: true, abe: true, securePayment: true,
   downloadScan: true, social: true, annoyance: true, cdnReplacement: true,
-  metadataCleanup: true, searchAnnotations: true, videoRedirect: true, httpsEnforce: true, passwordLeakCheck: true,
+  metadataCleanup: false, searchAnnotations: true, videoRedirect: true, httpsEnforce: true, passwordLeakCheck: true,
   'cc-adult': true, 'cc-gambling': true, 'cc-violence': true,
   aiDlp: true, defacementDetect: true, phoneScamDetect: true,
   phishingLinkDetect: true, fbPrivacy: true
