@@ -2082,7 +2082,9 @@
     function isTrustedDomain(domain) {
       if (trustedTLDs.some(function(t) { return domain.endsWith(t); })) return true;
       var parts = domain.split('.');
-      return parts.slice(0, -1).some(function(p) { return ['gov','edu','org'].indexOf(p) >= 0; });
+      if (parts.slice(0, -1).some(function(p) { return ['gov','edu','org'].indexOf(p) >= 0; })) return true;
+      if (domain.endsWith('.bank.in') || domain === 'bank.in') return true;
+      return false;
     }
     function isUnsafeDomain(domain) {
       return unsafeKeywords.some(function(k) { return domain.includes(k); });
