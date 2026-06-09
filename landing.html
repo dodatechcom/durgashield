@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DurgaShield — All-in-One Privacy & Security Extension for Firefox</title>
+<meta name="description" content="DurgaShield is a comprehensive, open-source Firefox extension that blocks ads, trackers, malware, phishing, crypto miners, and more. All-in-one privacy & security.">
+<style>
+*, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubuntu,sans-serif; background:#f5f7fa; color:#1a1a2e; line-height:1.7; }
+header { background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%); color:#fff; padding:60px 20px 80px; text-align:center; position:relative; overflow:hidden; }
+header::after { content:''; position:absolute; bottom:-2px; left:0; right:0; height:80px; background:#f5f7fa; border-radius:50% 50% 0 0 / 100% 100% 0 0; }
+header .shield { display:inline-flex; align-items:center; justify-content:center; width:80px; height:80px; background:linear-gradient(135deg,#e94560,#c23152); border-radius:20px; font-size:40px; margin-bottom:20px; box-shadow:0 8px 24px rgba(233,69,96,.4); }
+header h1 { font-size:42px; font-weight:800; letter-spacing:-1px; }
+header p { font-size:18px; color:#a0b4d0; max-width:600px; margin:16px auto 0; }
+.badge-row { display:flex; justify-content:center; gap:12px; margin-top:24px; flex-wrap:wrap; }
+.badge { display:inline-flex; align-items:center; gap:8px; background:rgba(255,255,255,.12); backdrop-filter:blur(4px); padding:8px 18px; border-radius:20px; font-size:13px; font-weight:600; }
+.badge svg { width:18px; height:18px; fill:currentColor; }
+.download-btn { display:inline-flex; align-items:center; gap:10px; background:#e94560; color:#fff; text-decoration:none; padding:16px 36px; border-radius:12px; font-size:18px; font-weight:700; margin-top:32px; transition:transform .15s,box-shadow .15s; box-shadow:0 4px 12px rgba(233,69,96,.3); }
+.download-btn:hover { transform:translateY(-2px); box-shadow:0 6px 20px rgba(233,69,96,.4); }
+.download-btn svg { width:22px; height:22px; }
+.container { max-width:960px; margin:0 auto; padding:0 20px; }
+section { padding:60px 0; }
+section h2 { font-size:28px; font-weight:700; text-align:center; margin-bottom:8px; }
+section h2 + p { text-align:center; color:#666; margin-bottom:40px; font-size:16px; }
+.card { background:#fff; border-radius:12px; padding:32px; box-shadow:0 1px 3px rgba(0,0,0,.06); }
+.grid-3 { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:24px; }
+.why-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:20px; }
+.why-item { text-align:center; padding:24px 16px; }
+.why-item .icon { width:48px; height:48px; border-radius:12px; display:inline-flex; align-items:center; justify-content:center; font-size:22px; margin-bottom:12px; }
+.why-item h3 { font-size:16px; font-weight:700; margin-bottom:4px; }
+.why-item p { font-size:13px; color:#666; }
+.feature-card { padding:24px; }
+.feature-card .icon { width:40px; height:40px; border-radius:10px; display:inline-flex; align-items:center; justify-content:center; font-size:18px; margin-bottom:12px; color:#fff; }
+.feature-card h3 { font-size:16px; font-weight:700; margin-bottom:4px; }
+.feature-card p { font-size:13px; color:#666; }
+.feature-card .tag { display:inline-block; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; padding:2px 8px; border-radius:4px; margin-bottom:8px; }
+.tag-blocking { background:#fce4ec; color:#c62828; }
+.tag-security { background:#fff3e0; color:#e65100; }
+.tag-privacy { background:#e3f2fd; color:#1565c0; }
+table { width:100%; border-collapse:collapse; font-size:14px; }
+th, td { padding:14px 16px; text-align:left; border-bottom:1px solid #eee; }
+th { background:#f8f9fa; font-weight:700; font-size:13px; text-transform:uppercase; letter-spacing:.5px; color:#555; }
+td:first-child { font-weight:600; }
+.winner { background:#e8f5e9; font-weight:700; color:#2e7d32; }
+.winner::after { content:' WINNER'; font-size:11px; background:#2e7d32; color:#fff; padding:1px 6px; border-radius:3px; margin-left:6px; }
+.faq-item { border-bottom:1px solid #eee; padding:20px 0; }
+.faq-item:last-child { border-bottom:none; }
+.faq-item h3 { font-size:15px; font-weight:700; cursor:pointer; color:#1a1a2e; }
+.faq-item h3:hover { color:#e94560; }
+.faq-item p { font-size:14px; color:#555; margin-top:8px; line-height:1.6; }
+.stats-bar { display:flex; justify-content:center; gap:40px; flex-wrap:wrap; padding:40px 0; }
+.stat { text-align:center; }
+.stat .num { font-size:36px; font-weight:800; color:#e94560; }
+.stat .label { font-size:13px; color:#666; }
+footer { background:#1a1a2e; color:#a0b4d0; text-align:center; padding:40px 20px; font-size:13px; }
+footer a { color:#e94560; text-decoration:none; }
+footer a:hover { text-decoration:underline; }
+.install-section { background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%); color:#fff; text-align:center; padding:60px 20px; }
+.install-section h2 { color:#fff; }
+.install-section .badge { background:rgba(255,255,255,.1); }
+@media(max-width:600px) {
+  header h1 { font-size:28px; }
+  header p { font-size:15px; }
+  .stat .num { font-size:28px; }
+  table { font-size:12px; }
+  th, td { padding:10px 8px; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="shield">&#x1F6E1;</div>
+  <h1>DurgaShield</h1>
+  <p>One extension to block ads, stop trackers, prevent malware, hide your fingerprint, and take back your privacy.</p>
+  <div class="badge-row">
+    <span class="badge">&#x1F512; Zero Data Collection</span>
+    <span class="badge">&#x1F4F1; 35+ Features</span>
+    <span class="badge">&#x1F4D6; Open Source (MIT)</span>
+    <span class="badge">&#x2699;&#xFE0F; Manifest V3</span>
+  </div>
+  <a class="download-btn" href="https://addons.mozilla.org/en-US/firefox/addon/durgashield/" target="_blank" rel="noopener">
+    <svg viewBox="0 0 24 24"><path d="M13 5.5c0-.83-.67-1.5-1.5-1.5S10 4.67 10 5.5c0 .83.67 1.5 1.5 1.5S13 6.33 13 5.5zM18.5 8c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5S20 10.33 20 9.5 19.33 8 18.5 8zm-13 4c-.83 0-1.5.67-1.5 1.5S4.67 15 5.5 15 7 14.33 7 13.5 6.33 12 5.5 12zm14.5-2.5c0 1.1-.9 2-2 2s-2-.9-2-2V6c0-1.1-.9-2-2-2H10c-1.1 0-2 .9-2 2v3.5c0 1.1-.9 2-2 2s-2-.9-2-2V9c0-1.1-.9-2-2-2S2 7.9 2 9v5c0 1.1.9 2 2 2h.33c.63 0 1.2-.34 1.49-.86l.96-1.75c.23-.42.67-.67 1.15-.67h.14c.48 0 .92.25 1.15.67l.96 1.75c.29.52.86.86 1.49.86H14c1.1 0 2-.9 2-2v-2.5c0-1.1.9-2 2-2s2 .9 2 2"/>Firefox</svg>
+    Add to Firefox — Free
+  </a>
+</header>
+
+<section>
+  <div class="container">
+    <h2>&#x1F3C6; Why Choose DurgaShield?</h2>
+    <p>One lightweight extension replaces 8–10 separate add-ons. No bloat, no tracking, no compromises.</p>
+    <div class="why-grid">
+      <div class="why-item card">
+        <div class="icon" style="background:#e94560;color:#fff;">&#x1F4AD;</div>
+        <h3>Ad Blocker</h3>
+        <p>Blocks ads, banners, video ads, and sponsored content across all sites</p>
+      </div>
+      <div class="why-item card">
+        <div class="icon" style="background:#dc3545;color:#fff;">&#x2620;</div>
+        <h3>Malware Protection</h3>
+        <p>Blocks ransomware, trojans, spyware, and drive-by download domains</p>
+      </div>
+      <div class="why-item card">
+        <div class="icon" style="background:#e67e22;color:#fff;">&#x1F50D;</div>
+        <h3>Phishing Protection</h3>
+        <p>Detects fake login pages and brand impersonation links in real time</p>
+      </div>
+      <div class="why-item card">
+        <div class="icon" style="background:#28a745;color:#fff;">&#x1F512;</div>
+        <h3>Privacy First</h3>
+        <p>Zero data collection. Everything stays local. Fully open source.</p>
+      </div>
+      <div class="why-item card">
+        <div class="icon" style="background:#6f42c1;color:#fff;">&#x1F4A5;</div>
+        <h3>Popup Blocker</h3>
+        <p>Intercepts unwanted popups and tab-unders before they appear</p>
+      </div>
+      <div class="why-item card">
+        <div class="icon" style="background:#17a2b8;color:#fff;">&#x1F310;</div>
+        <h3>Social Container</h3>
+        <p>Facebook, Instagram, Messenger isolated in a dedicated container</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="background:#fff;">
+  <div class="container">
+    <h2>&#x1F4CA; All Features</h2>
+    <p>Every tool you need for a safer, faster, cleaner browsing experience.</p>
+    <div class="grid-3">
+      <div class="feature-card card">
+        <div class="tag tag-blocking">BLOCKING</div>
+        <div class="icon" style="background:#e94560;">&#x1F4AD;</div>
+        <h3>Ad Blocker</h3>
+        <p>Network-level + DOM cleanup blocks ads, banners, video ads across all sites. YouTube, Twitch, Gmail, Instagram, Twitter/X, LinkedIn — all covered.</p>
+      </div>
+      <div class="feature-card card">
+        <div class="tag tag-blocking">BLOCKING</div>
+        <div class="icon" style="background:#6f42c1;">&#x1F4A5;</div>
+        <h3>Popup Blocker</h3>
+        <p>Intercepts <code>window.open()</code> calls targeting ad and popup domains before they spawn.</p>
+      </div>
+      <div class="feature-card card">
+        <div class="tag tag-blocking">BLOCKING</div>
+        <div class="icon" style="background:#1877f2;">&#x1F5E3;</div>
+        <h3>Social Media Filter</h3>
+        <p>Blocks Facebook, Twitter/X, Instagram, and LinkedIn tracking widgets, embed scripts, and sponsored feed items.</p>
+      </div>
+      <div class="feature-card card">
+        <div class="tag tag-blocking">BLOCKING</div>
+        <div class="icon" style="background:#dc3545;">&#x1F3B0;</div>
+        <h3>Adult & Gambling Block</h3>
+        <p>Blocks adult/pornographic, gambling, and violence/hate speech content categories.</p>
+      </div>
+      <div class="feature-card card">
+        <div class="tag tag-blocking">BLOCKING</div>
+        <div class="icon" style="background:#fd7e14;">&#x1F515;</div>
+        <h3>Annoyance Blocker</h3>
+        <p>Auto-dismisses cookie consent banners (OneTrust, Cookiebot, Quantcast, and 40+ more) and push notification prompts.</p>
+      </div>
+      <div class="feature-card card">
+        <div class="tag tag-blocking">BLOCKING</div>
+        <div class="icon" style="background:#ff6b35;">&#x26A1;</div>
+        <h3>Crypto Miner Blocking</h3>
+        <p>Blocks 124+ crypto mining domains and scripts. Prevents in-browser coin mining without breaking legitimate crypto sites.</p>
+      </div>
+      <div class="feature-card card">
+        <div class="tag tag-security">SECURITY</div>
+        <div class="icon" style="background:#dc3545;">&#x2620;</div>
+        <h3>Malware Protection</h3>
+        <p>133+ blocked domains: ransomware sites, trojans, spyware, fake antivirus, tech support scams, and drive-by downloads.</p>
+      </div>
+      <div class="feature-card card">
+        <div class="tag tag-security">SECURITY</div>
+        <div class="icon" style="background:#e67e22;">&#x1F50D;</div>
+        <h3>Phishing Protection</h3>
+        <p>172+ blocked phishing domains + real-time link analysis for brand impersonation, IP-based URLs, and shortener abuse.</p>
+      </div>
+      <div class="feature-card card">
+        <div class="tag tag-security">SECURITY</div>
+        <div class="icon" style="background:#28a745;">XS</div>
+        <h3>XSS Protection</h3>
+        <p>CSP injection, URL parameter sanitization, DOM mutation monitoring, and form submission filtering against script injection.</p>
+      </div>
+      <div class="feature-card card">
+        <div class="tag tag-security">SECURITY</div>
+        <div class="icon" style="background:#e94560;">CC</div>
+        <h3>ClearClick</h3>
+        <p>Anti-clickjacking protection — detects transparent overlays and intercepts clicks that pass through them.</p>
+      </div>
+      <div class="feature-card card">
+        <div class="tag tag-security">SECURITY</div>
+        <div class="icon" style="background:#343a40;">AB</div>
+        <h3>ABE</h3>
+        <p>Application Boundaries Enforcer — blocks local network resources (192.168.x, 10.x.x, localhost) from loading on public pages.</p>
+      </div>
+      <div class="feature-card card">
+        <div class="tag tag-security">SECURITY</div>
+        <div class="icon" style="background:#dc3545;">$$</div>
+        <h3>Secure Payment</h3>
+        <p>Blocks HTTP payment forms — ensures credit card info is only submitted over HTTPS.</p>
+      </div>
+      <div class="feature-card card">
+        <div class="tag tag-security">SECURITY</div>
+        <div class="icon" style="background:#28a745;">DL</div>
+        <h3>Download Scanner</h3>
+        <p>Scans downloaded files for known malware signatures before they're saved.</p>
+      </div>
+      <div class="feature-card card">
+        <div class="tag tag-security">SECURITY</div>
+        <div class="icon" style="background:#dc3545;">PW</div>
+        <h3>Password Leak Check</h3>
+        <p>Auto-checks passwords against known breaches (HIBP) as you type — without sending your password.</p>
+      </div>
+      <div class="feature-card card">
+        <div class="tag tag-security">SECURITY</div>
+        <div class="icon" style="background:#e94560;">PH</div>
+        <h3>Phone Scam Detection</h3>
+        <p>Scans pages for phone scam patterns and warns you before calling suspicious numbers.</p>
+      </div>
+      <div class="feature-card card">
+        <div class="tag tag-security">SECURITY</div>
+        <div class="icon" style="background:#6f42c1;">AI</div>
+        <h3>GenAI Data Leak Prevention</h3>
+        <p>Warns when you type sensitive data (SSN, passwords, API keys) into AI chatbots like ChatGPT, Gemini, and Claude.</p>
+      </div>
+      <div class="feature-card card">
+        <div class="tag tag-security">SECURITY</div>
+        <div class="icon" style="background:#dc3545;">DF</div>
+        <h3>Defacement Detection</h3>
+        <p>Checks major sites for defacement indicators in page titles (hacked, pwned, etc.) and shows a warning.</p>
+      </div>
+      <div class="feature-card card">
+        <div class="tag tag-security">SECURITY</div>
+        <div class="icon" style="background:#28a745;">HT</div>
+        <h3>HTTPS Enforcement</h3>
+        <p>Upgrades HTTP connections to HTTPS on major sites automatically.</p>
+      </div>
+      <div class="feature-card card">
+        <div class="tag tag-privacy">PRIVACY</div>
+        <div class="icon" style="background:#6610f2;">ST</div>
+        <h3>Stealth Mode</h3>
+        <p>Anti-fingerprinting: hides WebRTC private IPs, adds canvas noise, spoofs navigator.webdriver, and destroys old cookies.</p>
+      </div>
+      <div class="feature-card card">
+        <div class="tag tag-privacy">PRIVACY</div>
+        <div class="icon" style="background:#6f42c1;">AT</div>
+        <h3>Enhanced Anti-Track</h3>
+        <p>Randomizes navigator properties, dithers screen dimensions, and clears 50+ tracking keys from localStorage and cookies.</p>
+      </div>
+      <div class="feature-card card">
+        <div class="tag tag-privacy">PRIVACY</div>
+        <div class="icon" style="background:#17a2b8;">CD</div>
+        <h3>CDN Tracker Block</h3>
+        <p>Blocks known CDN-based tracking domains used for cross-site user identification.</p>
+      </div>
+      <div class="feature-card card">
+        <div class="tag tag-privacy">PRIVACY</div>
+        <div class="icon" style="background:#20c997;">CR</div>
+        <h3>CDN Replacement</h3>
+        <p>Serves local copies of jQuery, Bootstrap, React, Vue, Angular, D3, FontAwesome, and 10+ more libraries — no CDN requests needed.</p>
+      </div>
+      <div class="feature-card card">
+        <div class="tag tag-privacy">PRIVACY</div>
+        <div class="icon" style="background:#fd7e14;">NC</div>
+        <h3>Never-Consent</h3>
+        <p>Auto-dismisses cookie consent banners. Prefers "Reject All" when available; otherwise hides the banner silently.</p>
+      </div>
+      <div class="feature-card card">
+        <div class="tag tag-privacy">PRIVACY</div>
+        <div class="icon" style="background:#1877f2;">&#x1F310;</div>
+        <h3>Social Container</h3>
+        <p>Facebook, Instagram, Messenger, WhatsApp open in a dedicated container. Cookies stay separate from your main browsing.</p>
+      </div>
+      <div class="feature-card card">
+        <div class="tag tag-privacy">PRIVACY</div>
+        <div class="icon" style="background:#17a2b8;">EX</div>
+        <h3>Metadata Cleanup</h3>
+        <p>Strips EXIF data (GPS, camera info) from uploaded JPEG images automatically.</p>
+      </div>
+      <div class="feature-card card">
+        <div class="tag tag-privacy">PRIVACY</div>
+        <div class="icon" style="background:#1877f2;">FB</div>
+        <h3>Facebook/Instagram Privacy</h3>
+        <p>Hides seen indicators, typing status, read receipts, and "Active Now" on Messenger and Instagram DM.</p>
+      </div>
+      <div class="feature-card card">
+        <div class="tag tag-privacy">PRIVACY</div>
+        <div class="icon" style="background:#6610f2;">SA</div>
+        <h3>Search Annotations</h3>
+        <p>Annotates Google, Bing, and DuckDuckGo results with SAFE/RISK badges based on domain trust data.</p>
+      </div>
+      <div class="feature-card card">
+        <div class="tag tag-privacy">PRIVACY</div>
+        <div class="icon" style="background:#e94560;">&#x1F3AC;</div>
+        <h3>YouTube Channel Whitelist</h3>
+        <p>Allow ads on specific YouTube channels you want to support while blocking everywhere else.</p>
+      </div>
+      <div class="feature-card card">
+        <div class="tag tag-blocking">BLOCKING</div>
+        <div class="icon" style="background:#e94560;">&#x25B6;</div>
+        <h3>Video Redirect Guard</h3>
+        <p>Prevents hidden links in video players from silently opening new tabs or redirecting you.</p>
+      </div>
+      <div class="feature-card card">
+        <div class="tag tag-security">SECURITY</div>
+        <div class="icon" style="background:#6f42c1;">AI</div>
+        <h3>Extension Risk Audit</h3>
+        <p>Scans all installed extensions and flags those with dangerous permissions like nativeMessaging, debugger, or proxy.</p>
+      </div>
+      <div class="feature-card card">
+        <div class="tag tag-privacy">PRIVACY</div>
+        <div class="icon" style="background:#e67e22;">PL</div>
+        <h3>Phishing Link Detection</h3>
+        <p>Real-time link analysis: brand impersonation (g00gle.com), IP-based URLs, excessive subdomains, and URL shorteners.</p>
+      </div>
+      <div class="feature-card card">
+        <div class="tag tag-blocking">BLOCKING</div>
+        <div class="icon" style="background:#343a40;">&#x1F6AB;</div>
+        <h3>Site Blocker</h3>
+        <p>Add distracting sites to a block list. Navigation is blocked entirely — a productivity tool.</p>
+      </div>
+      <div class="feature-card card">
+        <div class="tag tag-privacy">PRIVACY</div>
+        <div class="icon" style="background:#17a2b8;">&#x1F4CA;</div>
+        <h3>Privacy Dashboard</h3>
+        <p>Live block stats, 7-day chart, privacy score (A-F), top blocked domains, and tracker heatmap — all in one view.</p>
+      </div>
+      <div class="feature-card card">
+        <div class="tag tag-blocking">BLOCKING</div>
+        <div class="icon" style="background:#e94560;">&#x1F9F0;</div>
+        <h3>Element Zapper</h3>
+        <p>Click any element on any page to permanently hide it. Selectors persist across visits. Undo supported.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <h2>&#x2696;&#xFE0F; Comparison: DurgaShield vs Other Extensions</h2>
+    <p>See how DurgaShield stacks up against popular privacy and ad-blocking extensions.</p>
+    <div class="card" style="overflow-x:auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>Feature</th>
+            <th style="background:#e94560;color:#fff;">DurgaShield</th>
+            <th>uBlock Origin</th>
+            <th>AdGuard</th>
+            <th>Ghostery</th>
+            <th>Privacy Badger</th>
+            <th>NoScript</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Ad Blocking</td>
+            <td class="winner">&#x2705;</td>
+            <td>&#x2705;</td>
+            <td>&#x2705;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+          </tr>
+          <tr>
+            <td>Malware Protection</td>
+            <td class="winner">&#x2705;</td>
+            <td>&#x2705;</td>
+            <td>&#x2705;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+          </tr>
+          <tr>
+            <td>Phishing Protection</td>
+            <td class="winner">&#x2705;</td>
+            <td>&#x274C;</td>
+            <td>&#x2705;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+          </tr>
+          <tr>
+            <td>Crypto Miner Blocking</td>
+            <td class="winner">&#x2705;</td>
+            <td>&#x2705;</td>
+            <td>&#x2705;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+          </tr>
+          <tr>
+            <td>Popup Blocker</td>
+            <td class="winner">&#x2705;</td>
+            <td>&#x2705;</td>
+            <td>&#x2705;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+          </tr>
+          <tr>
+            <td>Anti-Tracking (heuristic)</td>
+            <td class="winner">&#x2705;</td>
+            <td>&#x2705;</td>
+            <td>&#x2705;</td>
+            <td>&#x2705;</td>
+            <td>&#x2705;</td>
+            <td>&#x274C;</td>
+          </tr>
+          <tr>
+            <td>GPC / DNT Headers</td>
+            <td class="winner">&#x2705;</td>
+            <td>&#x274C;</td>
+            <td>&#x2705;</td>
+            <td>&#x2705;</td>
+            <td>&#x2705;</td>
+            <td>&#x274C;</td>
+          </tr>
+          <tr>
+            <td>Cookie Consent Auto-Dismiss</td>
+            <td class="winner">&#x2705;</td>
+            <td>&#x2705;</td>
+            <td>&#x2705;</td>
+            <td>&#x2705;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+          </tr>
+          <tr>
+            <td>Anti-Fingerprinting</td>
+            <td class="winner">&#x2705;</td>
+            <td>&#x274C;</td>
+            <td>&#x2705;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+          </tr>
+          <tr>
+            <td>WebRTC Private IP Block</td>
+            <td class="winner">&#x2705;</td>
+            <td>&#x2705;</td>
+            <td>&#x2705;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+          </tr>
+          <tr>
+            <td>Canvas Fingerprinting Protection</td>
+            <td class="winner">&#x2705;</td>
+            <td>&#x2705;</td>
+            <td>&#x2705;</td>
+            <td>&#x2705;</td>
+            <td>&#x2705;</td>
+            <td>&#x274C;</td>
+          </tr>
+          <tr>
+            <td>XSS Protection</td>
+            <td class="winner">&#x2705;</td>
+            <td>&#x274C;</td>
+            <td>&#x2705;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+            <td>&#x2705;</td>
+          </tr>
+          <tr>
+            <td>Anti-Clickjacking (ClearClick)</td>
+            <td class="winner">&#x2705;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+            <td>&#x2705;</td>
+          </tr>
+          <tr>
+            <td>ABE (Local Network Protection)</td>
+            <td class="winner">&#x2705;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+            <td>&#x2705;</td>
+          </tr>
+          <tr>
+            <td>Social Media Filter</td>
+            <td class="winner">&#x2705;</td>
+            <td>&#x2705;</td>
+            <td>&#x2705;</td>
+            <td>&#x2705;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+          </tr>
+          <tr>
+            <td>Social Container Isolation</td>
+            <td class="winner">&#x2705;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+          </tr>
+          <tr>
+            <td>CDN Replacement (local copies)</td>
+            <td class="winner">&#x2705;</td>
+            <td>&#x274C;</td>
+            <td>&#x2705;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+          </tr>
+          <tr>
+            <td>Link Tracking Removal</td>
+            <td class="winner">&#x2705;</td>
+            <td>&#x2705;</td>
+            <td>&#x2705;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+          </tr>
+          <tr>
+            <td>YouTube Ad Blocking</td>
+            <td class="winner">&#x2705;</td>
+            <td>&#x2705;</td>
+            <td>&#x2705;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+          </tr>
+          <tr>
+            <td>Twitch Ad Blocking</td>
+            <td class="winner">&#x2705;</td>
+            <td>&#x274C;</td>
+            <td>&#x2705;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+          </tr>
+          <tr>
+            <td>Streaming Service Ads (Spotify, Crunchyroll)</td>
+            <td class="winner">&#x2705;</td>
+            <td>&#x274C;</td>
+            <td>&#x2705;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+          </tr>
+          <tr>
+            <td>Phishing Link Detection</td>
+            <td class="winner">&#x2705;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+          </tr>
+          <tr>
+            <td>Password Leak Check (HIBP)</td>
+            <td class="winner">&#x2705;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+          </tr>
+          <tr>
+            <td>GenAI Data Leak Prevention</td>
+            <td class="winner">&#x2705;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+          </tr>
+          <tr>
+            <td>Download Malware Scanner</td>
+            <td class="winner">&#x2705;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+          </tr>
+          <tr>
+            <td>Extension Risk Audit</td>
+            <td class="winner">&#x2705;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+          </tr>
+          <tr>
+            <td>Facebook/Instagram Privacy Controls</td>
+            <td class="winner">&#x2705;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+          </tr>
+          <tr>
+            <td>Privacy Dashboard & Score</td>
+            <td class="winner">&#x2705;</td>
+            <td>&#x274C;</td>
+            <td>&#x2705;</td>
+            <td>&#x2705;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+          </tr>
+          <tr>
+            <td>Element Zapper</td>
+            <td class="winner">&#x2705;</td>
+            <td>&#x2705;</td>
+            <td>&#x2705;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+          </tr>
+          <tr>
+            <td>Auto-Updating Filter Lists</td>
+            <td class="winner">&#x2705;</td>
+            <td>&#x2705;</td>
+            <td>&#x2705;</td>
+            <td>&#x2705;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+          </tr>
+          <tr>
+            <td>JavaScript Per-Site Toggle</td>
+            <td class="winner">&#x2705;</td>
+            <td>&#x2705;</td>
+            <td>&#x2705;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+            <td>&#x2705;</td>
+          </tr>
+          <tr>
+            <td>HTTPS Enforcement</td>
+            <td class="winner">&#x2705;</td>
+            <td>&#x2705;</td>
+            <td>&#x2705;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+          </tr>
+          <tr>
+            <td>Secure Payment Detection</td>
+            <td class="winner">&#x2705;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+          </tr>
+          <tr>
+            <td>Defacement Detection</td>
+            <td class="winner">&#x2705;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+          </tr>
+          <tr>
+            <td>Phone Scam Detection</td>
+            <td class="winner">&#x2705;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+          </tr>
+          <tr>
+            <td>Zero Data Collection</td>
+            <td class="winner">&#x2705;</td>
+            <td>&#x2705;</td>
+            <td>&#x274C;</td>
+            <td>&#x274C;</td>
+            <td>&#x2705;</td>
+            <td>&#x2705;</td>
+          </tr>
+          <tr>
+            <td>Open Source</td>
+            <td class="winner">&#x2705; (MIT)</td>
+            <td>&#x2705; (GPL)</td>
+            <td>&#x2705; (GPL)</td>
+            <td>&#x2705; (MPL)</td>
+            <td>&#x2705; (GPL)</td>
+            <td>&#x2705; (GPL)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="text-align:center;color:#666;font-size:13px;margin-top:16px;">DurgaShield offers the most comprehensive feature set in a single extension. No other extension matches 35+ features without requiring additional add-ons.</p>
+  </div>
+</section>
+
+<section style="background:#fff;">
+  <div class="container">
+    <h2>&#x2753; Frequently Asked Questions</h2>
+    <p>Common questions about DurgaShield.</p>
+    <div class="card" style="max-width:800px;margin:0 auto;">
+      <div class="faq-item">
+        <h3>Is DurgaShield free?</h3>
+        <p>Yes. DurgaShield is completely free and open source under the MIT license. No paid tiers, no premium features, no hidden costs. It will always remain free.</p>
+      </div>
+      <div class="faq-item">
+        <h3>Does DurgaShield collect my data?</h3>
+        <p>Absolutely not. DurgaShield does not collect, store, or transmit any personal data. All settings, block lists, and statistics are stored locally in your browser's built-in storage. No analytics, no telemetry, no tracking. Zero data leaves your device.</p>
+      </div>
+      <div class="faq-item">
+        <h3>How is DurgaShield different from uBlock Origin?</h3>
+        <p>DurgaShield is an all-in-one solution. uBlock Origin excels at ad blocking but doesn't include phishing protection, anti-fingerprinting, social container isolation, password leak checking, GenAI data leak prevention, extension risk audit, or Facebook/Instagram privacy controls. DurgaShield replaces uBlock Origin + Ghostery + Privacy Badger + NoScript + Decentraleyes + Password Monitor + and more — all in a single extension.</p>
+      </div>
+      <div class="faq-item">
+        <h3>Will DurgaShield slow down my browser?</h3>
+        <p>No. DurgaShield uses Firefox's built-in <code>declarativeNetRequest</code> API for network-level blocking, which runs natively in the browser's C++ engine — far faster than JavaScript-based blocking. Most processing is offloaded to the browser itself, resulting in minimal performance impact. The content script is carefully optimized with debouncing, throttling, and mutation observer batching.</p>
+      </div>
+      <div class="faq-item">
+        <h3>Does DurgaShield block YouTube ads?</h3>
+        <p>Yes. DurgaShield removes YouTube ad DOM elements (video ads, banner ads, promoted videos, merchandise shelves) and auto-skips video ads as soon as the skip button appears. It also mutes and speeds up unskippable ads at 16x speed.</p>
+      </div>
+      <div class="faq-item">
+        <h3>Can I whitelist specific sites?</h3>
+        <p>Yes. You can whitelist any site from the popup with one click. Whitelisted sites bypass all blocking. You can also whitelist specific YouTube channels to allow ads only on creators you want to support.</p>
+      </div>
+      <div class="faq-item">
+        <h3>What is the Social Container feature?</h3>
+        <p>It uses Firefox's built-in container tabs to isolate Facebook, Instagram, Messenger, and WhatsApp in a dedicated "Social Media" container. Social media cookies are stored separately — not accessible from your normal browsing tabs. This prevents social media platforms from tracking your activity across other websites.</p>
+      </div>
+      <div class="faq-item">
+        <h3>Will DurgaShield work in Chrome?</h3>
+        <p>DurgaShield is built for Firefox with Manifest V3. It uses Firefox-specific APIs like <code>contextualIdentities</code> (container tabs) that are not available in Chrome. A Chrome-compatible version may be developed separately.</p>
+      </div>
+      <div class="faq-item">
+        <h3>What permissions does DurgaShield need and why?</h3>
+        <p>
+          <strong>declarativeNetRequest</strong> — Network-level ad and tracker blocking (the core of the ad blocker).<br>
+          <strong>storage</strong> — Save your settings, block lists, and stats locally.<br>
+          <strong>tabs</strong> — Know the current page to apply per-site settings and show relevant info in the popup.<br>
+          <strong>notifications</strong> — Alert you when malware, phishing, or other threats are blocked.<br>
+          <strong>contextualIdentities</strong> — Create the Social Container for isolating Facebook and Instagram.<br>
+          <strong>scripting</strong> — Inject anti-adblock bypass scriptlets into page context.<br>
+          <strong>unlimitedStorage</strong> — Store large filter lists locally.<br>
+          <strong>alarms</strong> — Schedule automatic filter list updates.<br>
+          <strong>management</strong> — Scan other extensions for security risk audit.<br>
+          <strong>&lt;all_urls&gt;</strong> — Block ads and trackers on any website you visit.
+        </p>
+      </div>
+      <div class="faq-item">
+        <h3>What filter lists does DurgaShield use?</h3>
+        <p>EasyList, EasyPrivacy, Peter Lowe's Ad server list, Online Malicious URL Blocklist (URLhaus), AdGuard Annoyances, EasyList Cookie, Dan Pollock's hosts file, Fanboy Annoyances, and Fanboy Social. All lists auto-update every 6 hours. You can enable or disable individual lists in the Settings page.</p>
+      </div>
+      <div class="faq-item">
+        <h3>How do I report a false positive (blocked legitimate site)?</h3>
+        <p>You can whitelist the site from the popup. For persistent false positives, please report the issue on GitHub at <a href="https://github.com/dodatechcom/durgashield/issues" target="_blank" rel="noopener">github.com/dodatechcom/durgashield/issues</a>.</p>
+      </div>
+      <div class="faq-item">
+        <h3>How do I report a bug or request a feature?</h3>
+        <p>Open an issue on the <a href="https://github.com/dodatechcom/durgashield/issues" target="_blank" rel="noopener">GitHub issues page</a>. Bug reports with reproduction steps are especially helpful.</p>
+      </div>
+      <div class="faq-item">
+        <h3>Is the source code available?</h3>
+        <p>Yes. DurgaShield is fully open source under the MIT License. The source code is available on <a href="https://github.com/dodatechcom/durgashield" target="_blank" rel="noopener">GitHub</a>.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <h2>&#x1F4DD; About DurgaShield</h2>
+    <p style="text-align:center;color:#666;max-width:700px;margin:0 auto 32px;">
+      DurgaShield is a comprehensive privacy and security extension for Firefox. Built with Manifest V3, it combines ad blocking, anti-tracking, malware protection, phishing detection, anti-fingerprinting, cookie consent management, social media container isolation, and much more — all in one lightweight, zero-tracking extension.
+    </p>
+    <div class="card" style="max-width:600px;margin:0 auto;">
+      <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+        <div><strong>License</strong><br>MIT License</div>
+        <div><strong>Version</strong><br>1.0.0</div>
+        <div><strong>Last Updated</strong><br>May 2026</div>
+        <div><strong>Language</strong><br>English</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="install-section">
+  <h2>&#x1F680; Ready to take control of your privacy?</h2>
+  <p style="color:#a0b4d0;margin-bottom:24px;">One extension. 35+ features. Zero tracking.</p>
+  <a class="download-btn" href="https://addons.mozilla.org/en-US/firefox/addon/durgashield/" target="_blank" rel="noopener">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 5.5c0-.83-.67-1.5-1.5-1.5S10 4.67 10 5.5c0 .83.67 1.5 1.5 1.5S13 6.33 13 5.5zM18.5 8c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5S20 10.33 20 9.5 19.33 8 18.5 8zm-13 4c-.83 0-1.5.67-1.5 1.5S4.67 15 5.5 15 7 14.33 7 13.5 6.33 12 5.5 12zm14.5-2.5c0 1.1-.9 2-2 2s-2-.9-2-2V6c0-1.1-.9-2-2-2H10c-1.1 0-2 .9-2 2v3.5c0 1.1-.9 2-2 2s-2-.9-2-2V9c0-1.1-.9-2-2-2S2 7.9 2 9v5c0 1.1.9 2 2 2h.33c.63 0 1.2-.34 1.49-.86l.96-1.75c.23-.42.67-.67 1.15-.67h.14c.48 0 .92.25 1.15.67l.96 1.75c.29.52.86.86 1.49.86H14c1.1 0 2-.9 2-2v-2.5c0-1.1.9-2 2-2s2 .9 2 2"/>Firefox</svg>
+    Add to Firefox — Free
+  </a>
+  <div class="badge-row" style="margin-top:24px;">
+    <span class="badge">&#x2B50; 100% Free</span>
+    <span class="badge">&#x1F512; No Data Collection</span>
+    <span class="badge">&#x1F4D6; Open Source (MIT)</span>
+    <span class="badge">&#x1F30D; 35+ Features</span>
+  </div>
+</div>
+
+<footer>
+  <p>DurgaShield &mdash; Open source under the MIT License</p>
+  <p style="margin-top:8px;">
+    <a href="https://addons.mozilla.org/en-US/firefox/addon/durgashield/" target="_blank" rel="noopener">Firefox Add-on</a>
+    &bull;
+    <a href="https://github.com/dodatechcom/durgashield" target="_blank" rel="noopener">GitHub</a>
+    &bull;
+    <a href="https://github.com/dodatechcom/durgashield/issues" target="_blank" rel="noopener">Report Issue</a>
+  </p>
+</footer>
+
+</body>
+</html>

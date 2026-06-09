@@ -287,5 +287,6 @@
   {"id":1295,"priority":1,"action":{"type":"block"},"condition":{"urlFilter":"||quge5.com^","resourceTypes":["script","image","xmlhttprequest","sub_frame"]}},
   {"id":1296,"priority":1,"action":{"type":"block"},"condition":{"urlFilter":"||html-load.com^","resourceTypes":["script","image","xmlhttprequest","sub_frame"]}},
   {"id":1297,"priority":1,"action":{"type":"block"},"condition":{"urlFilter":"||confiant-integrations.net^","resourceTypes":["script","xmlhttprequest"]}},
-  {"id":1298,"priority":1,"action":{"type":"block"},"condition":{"urlFilter":"||ascendeum-hb-urbandictionary.pages.dev^","resourceTypes":["script","xmlhttprequest"]}}
+  {"id":1298,"priority":1,"action":{"type":"block"},"condition":{"urlFilter":"||ascendeum-hb-urbandictionary.pages.dev^","resourceTypes":["script","xmlhttprequest"]}},
+  {"id":1299,"priority":1,"action":{"type":"block"},"condition":{"urlFilter":"||34f14f395e.com^","resourceTypes":["script","image","xmlhttprequest","sub_frame"]}}
 ]

@@ -56,6 +56,38 @@ select { background:#fff; border:1px solid #ddd; color:#1a1a2e; padding:5px; bor
 .empty-state { text-align:center; padding:20px; font-size:12px; color:#999; }
 a { color:#e94560; text-decoration:none; }
 a:hover { text-decoration:underline; }
+html.dark body { background:#1a1a2e; color:#e0e0e0; }
+html.dark .header { background:#16213e; border-bottom-color:#e94560; }
+html.dark .header-text h1 { color:#fff; }
+html.dark .header-text span { color:#999; }
+html.dark .nav { background:#16213e; border-bottom-color:#2a2a4a; }
+html.dark .nav-btn { color:#999; }
+html.dark .nav-btn:hover { color:#fff; background:rgba(255,255,255,.05); }
+html.dark .nav-btn.active { color:#e94560; }
+html.dark h3 { color:#ccc; }
+html.dark .card { background:#16213e; border-color:#2a2a4a; }
+html.dark .setting { border-bottom-color:#2a2a4a; }
+html.dark .setting-label small { color:#999; }
+html.dark .stat-card { background:#1a1a2e; border-color:#2a2a4a; }
+html.dark .stat-value { color:#e94560; }
+html.dark .stat-label { color:#999; }
+html.dark .rule-entry { background:#1a1a2e; }
+html.dark .log-entry { color:#bbb; border-bottom-color:#2a2a4a; }
+html.dark .log-entry:nth-child(odd) { background:rgba(255,255,255,.03); }
+html.dark .badge { background:#2a2a4a; color:#ccc; }
+html.dark input[type="text"] { background:#1a1a2e; border-color:#2a2a4a; color:#e0e0e0; }
+html.dark input[type="text"]:focus { border-color:#e94560; }
+html.dark select { background:#1a1a2e; border-color:#2a2a4a; color:#e0e0e0; }
+html.dark .empty-state { color:#666; }
+html.dark .filter-list-item { border-bottom-color:#2a2a4a; }
+html.dark #filterProgress { background:#1a1a2e; }
+html.dark #filterLogList { color:#999; }
+html.dark .trk-btn { border-color:#2a2a4a; color:#888; }
+html.dark p { color:#bbb !important; }
+html.dark td { color:#bbb !important; }
+html.dark ul li { color:#bbb !important; }
+html.dark #cleanupTimeRange { background:#1a1a2e !important; border-color:#2a2a4a !important; color:#e0e0e0 !important; }
+
 .trk-btn { width:22px; height:22px; border-radius:3px; border:1px solid #ddd; background:transparent; color:#888; font-size:10px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; transition:all .1s; line-height:1; }
 .trk-btn:hover { border-color:#bbb; color:#555; }
 .trk-btn.active-allow { background:#28a745; color:#fff; border-color:#28a745; }
@@ -69,6 +101,9 @@ a:hover { text-decoration:underline; }
   <div class="header-icon">&#x1F6E1;</div>
   <div class="header-text"><h1>DurgaShield</h1><span>All-in-one Privacy & Security</span></div>
   <span id="protectionBadge" style="background:#28a745;color:white;padding:4px 12px;border-radius:4px;font-size:11px;font-weight:600">Protected</span>
+  <label style="display:flex;align-items:center;gap:4px;font-size:10px;color:#666;cursor:pointer" title="Toggle Dark Mode">
+    <input type="checkbox" id="darkModeToggle"> Dark
+  </label>
 </div>
 
 <div class="nav" id="tabNav">
@@ -256,9 +291,9 @@ a:hover { text-decoration:underline; }
           All-in-one privacy &amp; security for Firefox: blocks ads, malware, phishing, crypto miners, and trackers. Includes anti-fingerprinting, social media isolation, element zapper, and more.<br><br>
           <a href="privacy.html">Privacy</a> &bull;
           <a href="donations.html">Donate</a> &bull;
-          <a href="https://github.com/WholeSale2c/durgashield" target="_blank" rel="noopener">GitHub</a> &bull;
-          <a href="https://github.com/WholeSale2c/durgashield/issues" target="_blank" rel="noopener">Report Issue</a> &bull;
-          <a href="https://github.com/WholeSale2c/durgashield/blob/main/LICENSE.md" target="_blank" rel="noopener">License</a>
+          <a href="https://github.com/dodatechcom/durgashield" target="_blank" rel="noopener">GitHub</a> &bull;
+          <a href="https://github.com/dodatechcom/durgashield/issues" target="_blank" rel="noopener">Report Issue</a> &bull;
+          <a href="https://github.com/dodatechcom/durgashield/blob/main/LICENSE.md" target="_blank" rel="noopener">License</a>
         </p>
       </div>
       <div class="card" style="margin-top:16px">
@@ -347,6 +382,11 @@ a:hover { text-decoration:underline; }
       </div>
     </div>
 
+<script src="core/filter-deps.js"></script>
+<script src="core/pattern-matcher.js"></script>
+<script src="core/dnr-compiler.js"></script>
+<script src="core/filter-engine.js"></script>
+<script src="settings/state.js"></script>
 <script src="settings.js"></script>
 </body>
 </html>

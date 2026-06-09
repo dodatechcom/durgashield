@@ -87,7 +87,7 @@ A comprehensive Firefox security extension using Manifest V3. Blocks ads, popups
 - **IP-based URL detection**: Flags IP-address links combined with login/banking keywords
 - **URL shortener identification**: Detects and flags links using shorteners (bit.ly, tinyurl, t.co, etc.)
 - **Excessive subdomain detection**: Warns on URLs with 4+ subdomains combined with login/verify paths
-- **Click interceptor**: Prevents navigation to flagged links and shows a warning with the specific reason
+- **Click interceptor**: Prevents navigation to flagged links and shows a confirmation modal — user can choose "Open anyway?" to proceed
 - **Visual marking**: Flagged links are colored red on the page
 - **Opt-in**: Disabled by default; enable via the **Phishing Link Detection** toggle in Features tab
 
@@ -132,6 +132,8 @@ A comprehensive Firefox security extension using Manifest V3. Blocks ads, popups
 - **`prevent-xhr` / `prevent-fetch`** — blocks specific XHR/fetch requests from page scripts (e.g., ad analytics beacons)
 - **`json-prune`** — removes specified properties from parsed JSON responses (e.g., ad configuration data)
 - **Pre-configured host bypasses** — known anti-adblock walls (`adblocktest.org`, `blockadblock.com`, etc.) get targeted scriptlet sets automatically
+- **MAIN world injection** — scriptlets that must modify page-level `window` properties (fetch, open, setInterval, JSON.parse) use `injectMainWorldCode()` to inject code into the page's JavaScript context, bypassing Firefox MV3 isolated world restrictions
+- **Custom event bridge** — injected code communicates back to the content script via `dgs-bridge` DOM events (used for block counting)
 - **Runs at `document_start`** — before any page JavaScript executes, ensuring the hooks are in place first
 
 ### Element Zapper
@@ -140,6 +142,7 @@ A comprehensive Firefox security extension using Manifest V3. Blocks ads, popups
 - Selector is persisted in extension storage and applied automatically on future visits
 - Hover highlights target elements with a red outline before clicking
 - Press Escape to cancel zapper mode
+- **Undo**: Shows an "Undo" banner after exiting zapper mode — click to restore hidden elements and remove the stored rule
 
 ### Site Whitelist
 - "Trust site" button in popup to whitelist the current domain
@@ -229,7 +232,7 @@ A comprehensive Firefox security extension using Manifest V3. Blocks ads, popups
 
 ### Disable Specific Rules
 - Enter any DNR rule ID to disable it (removed from dynamic rules before applying)
-- Static ruleset IDs: 1001-1298 (289 rules in ads), 100000-100132 (malware), 200001-200124 (crypto), 300001-300172 (phishing)
+- Static ruleset IDs: 1001-1299 (290 rules in ads), 100000-100133 (134 malware), 200001-200124 (crypto), 300001-300172 (phishing)
 - Dynamic rule IDs: 500000+ (filter lists), 700000+ (JS blocking), 701000+ (custom rules), 702000+ (site blocker), 703000+ (acceptable ads)
 - Disabled IDs stored in `durgashield_disabled_rules`
 
@@ -245,8 +248,8 @@ A comprehensive Firefox security extension using Manifest V3. Blocks ads, popups
 
 ### Stealth Mode (AdGuard-inspired, opt-in)
 - **Referrer hiding**: Injects `<meta name="referrer" content="no-referrer">` to prevent referrer leakage to third parties
-- **WebRTC blocking**: Overrides `RTCPeerConnection` constructor to prevent IP leaks via WebRTC
-- **Canvas fingerprinting protection**: Adds subtle noise (`Math.random() * 0.001`) to canvas `toDataURL()` output and wraps `toBlob()` to mitigate fingerprinting
+- **WebRTC blocking**: Wraps `RTCPeerConnection` constructor to filter private IP (`192.168.*`, `10.*`, `172.16‑31.*`) ICE candidates — hides local IPs while allowing STUN/TURN relay connections
+- **Canvas fingerprinting protection**: `getImageData` passes through clean data (no pixel modification); noise added only at `toDataURL()` / `toBlob()` output where fingerprinters read the final rendering
 - **Hide automation**: Overrides `navigator.webdriver` to return `undefined`
 - **Cookie self-destruction**: Background script removes non-session cookies older than 1 hour from non-whitelisted domains every 30 minutes
 - **Opt-in**: Disabled by default — `history.pushState` neutering breaks SPA navigation. Enable via the **Stealth Mode** switch in the popup
@@ -363,8 +366,8 @@ A comprehensive Firefox security extension using Manifest V3. Blocks ads, popups
 
 | Ruleset | Rule IDs | Rules | Purpose |
 |---|---|---|---|---|---|
-| `ads.json` (static) | 1001-1298 | 289 | Ad networks, trackers, social pixels, analytics |
-| `malware.json` (static) | 100000-100132 | 133 | Malware domains, ransomware, scams |
+| `ads.json` (static) | 1001-1299 | 290 | Ad networks, trackers, social pixels, analytics |
+| `malware.json` (static) | 100000-100133 | 134 | Malware domains, ransomware, scams |
 | `crypto.json` (static) | 200001-200124 | 124 | Crypto miners, mining pools |
 | `phishing.json` (static) | 300001-300172 | 172 | Phishing domains, fake login pages |
 | `cdn.json` (static) | 900001-900044 | 22 | CDN resource localization redirects |
@@ -434,7 +437,7 @@ durgashield/
 ├── donations.html         # Donations page
 ├── donations.js           # Donations page script
 ├── rules/
-│   ├── ads.json           # 289 ad blocking rules
+│   ├── ads.json           # 290 ad blocking rules
 │   ├── malware.json       # 133 malware blocking rules
 │   ├── crypto.json        # 124 crypto mining blocking rules
 │   ├── phishing.json      # 172 phishing blocking rules
@@ -475,14 +478,32 @@ Keep README.md updated when adding or modifying features.
 
 ## Feedback & Support
 
-- **Report bugs or request features**: Open an issue at [github.com/WholeSale2c/durgashield/issues](https://github.com/WholeSale2c/durgashield/issues)
-- **Source code**: [github.com/WholeSale2c/durgashield](https://github.com/WholeSale2c/durgashield)
+- **Report bugs or request features**: Open an issue at [github.com/dodatechcom/durgashield/issues](https://github.com/dodatechcom/durgashield/issues)
+- **Source code**: [github.com/dodatechcom/durgashield](https://github.com/dodatechcom/durgashield)
 
 ## License
 
 MIT
 
 ## Changelog
+
+### v1.2.0 — Architecture overhaul, performance & UX fixes (2026-06-08)
+- **MAIN world scriptlet injection**: Created `injectMainWorldCode()` helper — overrides for `RTCPeerConnection`, `window.open`, `window.fetch`, `JSON.parse`, `window.setInterval`, `Navigator.prototype`, `Screen.prototype` now inject code into the page's JavaScript context via `<script>` element, bypassing Firefox MV3 isolated world restrictions. Custom DOM event bridge (`dgs-bridge`) for injected code → content script communication.
+- **MutationObserver per-feature throttling**: Replaced single 100ms debounce with per-feature `runThrottled()` with individual gaps (300ms–2000ms per feature). Main debounce increased to 200ms. Prevents layout thrashing on heavy SPAs.
+- **`neuterGenericAntiAdblock` fixed**: Removed broken `window[ns]` isolated-world access — relies solely on `set-constant` scriptlet (MAIN world injection) for FuckAdBlock/BlockAdBlock neutering.
+- **Canvas noise at output only**: `getImageData` changed to clean pass-through; noise applied only at `toDataURL`/`toBlob` (where fingerprinters read the output). Fixes legitimate pixel-perfect canvas apps.
+- **GenAI DLP input debounce**: 500ms debounce on `input` events (blur still fires immediately). Avoids per-keystroke pattern matching.
+- **Scam detection false positive guard**: URL + meta description guard skips support/help/docs/knowledgebase/blog subdomains in `detectTechSupportScams`, `detectCryptoScams`, `detectPhoneScams`. Crypto news domains (CoinDesk, CoinTelegraph, Binance, Kraken, etc.) exempted.
+- **Payment field patterns tightened**: `/pin/i` → `/\bpin\b/i` — avoids false matches on `pincode`, `spinner`, `pink`, etc.
+- **Ad placeholder exclusion**: `el.closest('nav, footer, header, main, [role="navigation"], [role="contentinfo"]')` guard prevents collapsing legitimate site structure.
+- **Phishing link flow fixed**: Changed from unconditional `preventDefault()` + `showWarning()` → `showConfirmModal()` with "Open anyway?" option.
+- **Facebook feed scanner optimized**: Uses index-based tracking (`_lastIdx`) instead of re-scanning `querySelectorAll('> div > div')` on every tick.
+- **Clipboard read hijack removed**: Browser's transient activation + permission prompt already protects `clipboard.read`/`readText`. Redundant wrapper removed.
+- **Element zapper undo**: Tracks blocked selectors; shows "Undo" banner after exiting zapper mode. Sends `REMOVE_HIDE_RULE` to background to persist removal.
+- **YouTube ad skip interval**: Reduced 800ms → 400ms; fires fast 100ms check on URL change for quicker ad overlay capture.
+- **Shadow DOM traversal removed**: Removed expensive `document.querySelectorAll('*')` loop from `injectStyleDeep` — ads in closed shadow DOMs can't be accessed, and the overhead on every observer tick was prohibitive.
+- **CDN rules cleanup**: Removed broad static DNR rules for CDN replacement in favor of exact-version dynamic rules.
+- `REMOVE_HIDE_RULE` message type added to content script.
 
 ### v1.1.0 — Crypto scam detection, phishing links, streaming ads, FB/IG privacy, site blocker, acceptable ads (2026-05-22)
 - **Crypto Scam Detection Enhanced**: Added 18 new scam indicators (wallet drainers, fake exchange, impersonating support, NFT mint scams) and marks suspicious airdrop/giveaway links in red

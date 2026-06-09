@@ -46,6 +46,18 @@ body { width:240px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Robo
 .tool-btn.donate .icon { background:#28a745; }
 .footer { padding:6px 14px; background:#f8f9fa; text-align:center; font-size:9px; color:#999; }
 .tracker-empty { font-size:10px; color:#999; padding:4px 0 6px; text-align:center; }
+html.dark body { background:#1a1a2e; color:#e0e0e0; }
+html.dark .header { background:#16213e; border-bottom-color:#e94560; }
+html.dark .header-text h1 { color:#fff; }
+html.dark .header-text span { color:#999; }
+html.dark .tool-btn { background:#16213e; color:#999; }
+html.dark .tool-btn:hover { background:#1a1a2e; color:#e94560; }
+html.dark .footer { background:#16213e; color:#666; }
+html.dark #trackerSection { border-bottom-color:#2a2a4a; }
+html.dark .tracker-item { border-bottom-color:#2a2a4a; }
+html.dark .tracker-domain { color:#bbb; }
+html.dark .action-btn { border-color:#2a2a4a; color:#888; }
+html.dark .status-row { color:#999; }
 </style>
 </head>
 <body>
@@ -56,6 +68,7 @@ body { width:240px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Robo
 </div>
 <div class="status-row">
   <span><span class="dot active" id="statusDot"></span> <span id="blockedToday">0</span> blocked today</span>
+  <a href="#" id="perSiteToggle" style="color:#e94560;text-decoration:none;font-weight:600"></a>
 </div>
 <div id="trackerSection">
   <div id="trackerHeader"><span>TRACKERS ON THIS PAGE</span><span id="trackerCount" style="color:#555;">0</span></div>
@@ -68,6 +81,6 @@ body { width:240px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Robo
   <button class="tool-btn donate" id="donateBtn"><div class="icon">&#x2764;</div> Donate</button>
 </div>
 <div class="footer">v1.0.0</div>
-<script src="popup.js"></script>
+<script src="api.js"></script><script src="ui.js"></script>
 </body>
 </html>

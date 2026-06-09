@@ -1,13 +1,96 @@
+const _b = typeof browser !== 'undefined' ? browser : chrome;
+const MSG = {
+  GET_CONFIG: 'getConfig',
+  SAVE_CONFIG: 'saveConfig',
+  CONFIG_UPDATED: 'configUpdated',
+  STEALTH_UPDATED: 'stealthUpdated',
+  COSMETIC_FILTERS: 'cosmeticFilters',
+  GET_STATS: 'getStats',
+  BLOCK_COUNT: 'blockCount',
+  MALWARE_DETECTED: 'malwareDetected',
+  GET_CONTAINER_INFO: 'getContainerInfo',
+  CHECK_CONTAINER_TAB: 'checkContainerTab',
+  GET_WHITELIST: 'getWhitelist',
+  ADD_WHITELIST: 'addWhitelist',
+  REMOVE_WHITELIST: 'removeWhitelist',
+  IS_WHITELISTED: 'isWhitelisted',
+  GET_HIDE_RULES: 'getHideRules',
+  ADD_HIDE_RULE: 'addHideRule',
+  REMOVE_HIDE_RULE: 'removeHideRule',
+  GET_SITE_STATS: 'getSiteStats',
+  RECORD_SITE_BLOCK: 'recordSiteBlock',
+  GET_TAB_INFO: 'getTabInfo',
+  ENTER_ZAPPER: 'enterZapper',
+  ACTIVATE_ZAPPER: 'activateZapper',
+  GET_FILTER_LIST_STATUS: 'getFilterListStatus',
+  GET_FILTER_LIST_CONFIG: 'getFilterListConfig',
+  SET_FILTER_LIST_ENABLED: 'setFilterListEnabled',
+  UPDATE_FILTER_LISTS: 'updateFilterLists',
+  GET_DYNAMIC_RULE_COUNT: 'getDynamicRuleCount',
+  GET_JS_SETTINGS: 'getJsSettings',
+  SET_JS_SETTING: 'setJsSetting',
+  GET_CUSTOM_RULES: 'getCustomRules',
+  ADD_CUSTOM_RULE: 'addCustomRule',
+  REMOVE_CUSTOM_RULE: 'removeCustomRule',
+  GET_DISABLED_RULES: 'getDisabledRules',
+  TOGGLE_DISABLED_RULE: 'toggleDisabledRule',
+  GET_DISABLED_RULE_IDS: 'getDisabledRuleIds',
+  REPORT_THIRD_PARTIES: 'reportThirdParties',
+  GET_DETECTED_TRACKERS: 'getDetectedTrackers',
+  GET_TRACKERS_FOR_HOST: 'getTrackersForHost',
+  GET_TRACKER_CATEGORIES: 'getTrackerCategories',
+  WHITELIST_TRACKER: 'whitelistTracker',
+  RESET_TRACKER_DATA: 'resetTrackerData',
+  GET_TRACKER_ACTIONS: 'getTrackerActions',
+  SET_TRACKER_ACTION: 'setTrackerAction',
+  GET_STEALTH_CONFIG: 'getStealthConfig',
+  SAVE_STEALTH_CONFIG: 'saveStealthConfig',
+  GET_FILTER_LOG: 'getFilterLog',
+  CLEAR_FILTER_LOG: 'clearFilterLog',
+  XSS_DETECTED: 'xssDetected',
+  ABE_BLOCKED: 'abeBlocked',
+  SECURE_PAYMENT_BLOCKED: 'securePaymentBlocked',
+  GET_DAILY_STATS: 'getDailyStats',
+  GET_YOUTUBE_WHITELIST: 'getYouTubeWhitelist',
+  ADD_YOUTUBE_WHITELIST: 'addYouTubeWhitelist',
+  REMOVE_YOUTUBE_WHITELIST: 'removeYouTubeWhitelist',
+  GET_TOP_DOMAINS: 'getTopDomains',
+  HANDLE_BROWSER_CLEANUP: 'handleBrowserCleanup',
+  GET_SITE_PERMISSIONS: 'getSitePermissions',
+  GET_CONTAINER_STATUS: 'getContainerStatus',
+  UPDATE_CDN_MAP: 'updateCDNMap',
+  GET_CDN_MAP: 'getCDNMap',
+  UPDATE_CDN_FILES: 'updateCDNFiles',
+  GET_CDN_FILES_STATUS: 'getCDNFilesStatus',
+  CHECK_PASSWORD_LEAK: 'checkPasswordLeak',
+  GET_PASSWORD_LEAKS: 'getPasswordLeaks',
+  CLEAR_PASSWORD_LEAKS: 'clearPasswordLeaks',
+  AUTO_CHECK_PASSWORD: 'autoCheckPassword',
+  EXPORT_FILTER_LOG: 'exportFilterLog',
+  GET_LOG_COUNT: 'getLogCount',
+  GET_FILTER_LOG_RANGE: 'getFilterLogRange',
+  SCAN_EXTENSIONS: 'scanExtensions',
+  GET_EXTENSION_AUDIT: 'getExtensionAudit',
+  GET_PRIVACY_SCORE: 'getPrivacyScore',
+  GET_SITE_BLOCKER: 'getSiteBlocker',
+  SAVE_SITE_BLOCKER: 'saveSiteBlocker',
+  GET_ACCEPTABLE_ADS: 'getAcceptableAds',
+  SAVE_ACCEPTABLE_ADS: 'saveAcceptableAds',
+  GET_SITE_PREFS: 'getSitePrefs',
+  SET_SITE_PREFS: 'setSitePrefs',
+  GET_PERF_MODE: 'getPerfMode',
+  SET_PERF_MODE: 'setPerfMode',
+  SET_ENABLED: 'setEnabled'
+};
 const STORAGE_KEY = 'durgashield_config';
 const STATS_KEY = 'durgashield_stats';
 const WHITELIST_KEY = 'durgashield_whitelist';
 const HIDE_RULES_KEY = 'durgashield_hide_rules';
 const SITE_STATS_KEY = 'durgashield_site_stats';
-const TRACKER_MAP_KEY = 'durgashield_tracker_map';
-const AUTO_TRACKED_KEY = 'durgashield_auto_tracked';
 const STEALTH_KEY = 'durgashield_stealth';
 const FILTER_LOG_KEY = 'durgashield_filter_log';
 const YT_WHITELIST_KEY = 'durgashield_youtube_whitelist';
+const SITE_PREFS_KEY = 'durgashield_site_prefs';
 
 const PERMISSIONS_KEY = 'durgashield_site_permissions';
 
@@ -18,9 +101,9 @@ const OPTIONAL_FEATURE_PERMS = {
 async function ensurePermissions(feature) {
   const perms = OPTIONAL_FEATURE_PERMS[feature];
   if (!perms) return true;
-  const already = await chrome.permissions.contains({ permissions: perms });
+  const already = await _b.permissions.contains({ permissions: perms });
   if (already) return true;
-  const granted = await chrome.permissions.request({ permissions: perms });
+  const granted = await _b.permissions.request({ permissions: perms });
   if (!granted) {
     const config = await getConfig();
     config[feature] = false;
@@ -37,7 +120,8 @@ const DEFAULT_CONFIG = {
   metadataCleanup: false, searchAnnotations: true, videoRedirect: true, httpsEnforce: true, passwordLeakCheck: true,
   'cc-adult': true, 'cc-gambling': true, 'cc-violence': true,
   aiDlp: true, defacementDetect: true, phoneScamDetect: true,
-  phishingLinkDetect: true, fbPrivacy: true
+  phishingLinkDetect: true, fbPrivacy: true,
+  perfMode: 'balanced' // lite | balanced | aggressive
 };
 
 const CONTAINER_NAME = 'Social Media';
@@ -53,69 +137,45 @@ const ISOLATED_DOMAINS = [
 let containerIdentity = null;
 const countedMatches = new Set();
 
-/* ---------- Filter List Auto-Update ---------- */
-const FILTER_LISTS = [
-  { id:'easylist',        name: 'EasyList',                    url: 'https://easylist.to/easylist/easylist.txt', enabled: true, maxRules: 5000 },
-  { id:'easyprivacy',     name: 'EasyPrivacy',                 url: 'https://easylist.to/easylist/easyprivacy.txt', enabled: true, maxRules: 3000 },
-  { id:'peterlowe',       name: "Peter Lowe's Ad server",      url: 'https://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&showintro=0&mimetype=plaintext', enabled: true, maxRules: 2000 },
-  { id:'urlhaus',         name: 'Online Malicious URL Blocklist', url: 'https://malware-filter.gitlab.io/malware-filter/urlhaus-filter-online.txt', enabled: true, maxRules: 2000 },
-  { id:'adguard-annoy',   name: 'AdGuard Annoyances',          url: 'https://filters.adtidy.org/extension/ublock/filters/14.txt', enabled: true, maxRules: 2000 },
-  { id:'easylist-cookie', name: 'EasyList Cookie',             url: 'https://secure.fanboy.co.nz/fanboy-cookiemonster.txt', enabled: true, maxRules: 1500 },
-  { id:'danpollock',      name: "Dan Pollock's hosts",         url: 'https://someonewhocares.org/hosts/zero/hosts', enabled: true, maxRules: 1500 },
-  { id:'fanboy-annoy',    name: 'Fanboy Annoyances',           url: 'https://easylist.to/easylist/fanboy-annoyance.txt', enabled: false, maxRules: 1000 },
-  { id:'fanboy-social',   name: 'Fanboy Social',               url: 'https://easylist.to/easylist/fanboy-social.txt', enabled: false, maxRules: 1000 },
-];
+/* ---------- Rule Priority Tiers ---------- */
+const PRIORITY = {
+  CRITICAL: 1000,
+  MALWARE: 500,
+  PHISHING: 400,
+  PRIVACY: 200,
+  ADS: 100,
+  COSMETIC: 50,
+  DEFAULT: 10
+};
 
-const FILTER_RULE_START = 500000;
-const FILTER_RULE_MAX = 4900;
+/* ---------- ID Ranges ---------- */
+const HEADER_RULE_START = 600000;
+const AUTO_TRACKER_START = 620000;
+const COOKIE_BLOCK_START = 640000;
 const FILTER_STORAGE_KEY = 'durgashield_filter_rules';
-const FILTER_META_KEY = 'durgashield_filter_meta';
 const UPDATE_INTERVAL = 6 * 60 * 60 * 1000; // 6 hours
+/* ---------- Platform check (Chrome vs Firefox) ---------- */
+const _hasContainers = typeof _b.contextualIdentities !== 'undefined';
+const _maxDynamicRules = typeof _b.declarativeNetRequest !== 'undefined' &&
+  _b.declarativeNetRequest.MAX_NUMBER_OF_DYNAMIC_AND_SESSION_RULES
+  ? _b.declarativeNetRequest.MAX_NUMBER_OF_DYNAMIC_AND_SESSION_RULES : 5000;
 
-async function getFilterMeta() {
-  const r = await chrome.storage.local.get(FILTER_META_KEY);
-  return r[FILTER_META_KEY] || {};
-}
-async function saveFilterMeta(meta) {
-  await chrome.storage.local.set({ [FILTER_META_KEY]: meta });
-}
-
-const FILTER_LIST_SETTINGS_KEY = 'durgashield_filter_list_settings';
-
-async function getFilterListSettings() {
-  const r = await chrome.storage.local.get(FILTER_LIST_SETTINGS_KEY);
-  return r[FILTER_LIST_SETTINGS_KEY] || {};
-}
-async function saveFilterListSettings(settings) {
-  await chrome.storage.local.set({ [FILTER_LIST_SETTINGS_KEY]: settings });
-}
-
-async function loadFilterListEnabledStates() {
-  const saved = await getFilterListSettings();
-  for (const fl of FILTER_LISTS) {
-    if (saved[fl.id] !== undefined) fl.enabled = saved[fl.id];
-  }
-}
-async function getStoredFilterRules() {
-  const r = await chrome.storage.local.get(FILTER_STORAGE_KEY);
-  return r[FILTER_STORAGE_KEY] || [];
-}
-async function saveStoredFilterRules(rules) {
-  await chrome.storage.local.set({ [FILTER_STORAGE_KEY]: rules });
-}
-
-const DYNAMIC_RULE_LIMIT = 5000;
+const DYNAMIC_RULE_LIMIT = _maxDynamicRules;
 
 async function applyDynamicRules(rules) {
   try {
-    const oldRules = await chrome.declarativeNetRequest.getDynamicRules();
-    const oldIds = oldRules.map(r => r.id);
-    const capped = rules.slice(0, DYNAMIC_RULE_LIMIT);
+    const capped = prioritizeRules(rules, DYNAMIC_RULE_LIMIT);
     if (capped.length < rules.length) {
-      console.warn(`DurgaShield: rule cap hit (${rules.length} > ${DYNAMIC_RULE_LIMIT}), dropping ${rules.length - capped.length} rules`);
+      console.warn(`DurgaShield: rule cap hit (${rules.length} > ${DYNAMIC_RULE_LIMIT}), dropped ${rules.length - capped.length} low-priority rules`);
     }
-    await chrome.declarativeNetRequest.updateDynamicRules({
-      removeRuleIds: oldIds,
+    const oldRules = await _b.declarativeNetRequest.getDynamicRules();
+    const oldIds = new Set(oldRules.map(r => r.id));
+    const newIds = new Set(capped.map(r => r.id));
+    if (oldIds.size === newIds.size && [...oldIds].every(id => newIds.has(id))) {
+      return;
+    }
+    await _b.declarativeNetRequest.updateDynamicRules({
+      removeRuleIds: [...oldIds],
       addRules: capped
     });
   } catch (e) {
@@ -123,242 +183,77 @@ async function applyDynamicRules(rules) {
   }
 }
 
-function isAllowRule(line) {
-  return line.startsWith('@@');
+function prioritizeRules(rules, limit) {
+  // Sort by priority descending, then by ID ascending for stability
+  const sorted = [...rules].sort((a, b) => (b.priority || 0) - (a.priority || 0) || (a.id || 0) - (b.id || 0));
+  if (sorted.length <= limit) return sorted;
+  return sorted.slice(0, limit);
 }
 
-function isHostsLine(line) {
-  return /^(?:\d{1,3}\.){3}\d{1,3}\s+\S/.test(line) || /^::\d?\s+\S/.test(line) || /^0\.0\.0\.0\s+\S/.test(line);
-}
 
-function extractHostFromHostsLine(line) {
-  const m = line.match(/(?:\d{1,3}\.){3}\d{1,3}\s+(\S+)/) || line.match(/::\d?\s+(\S+)/);
-  return m ? m[1] : null;
-}
-
-function isBareDomain(line) {
-  return /^[\w.-]+\.[a-z]{2,}$/i.test(line) && !line.includes('/') && !line.startsWith('@@') && !line.startsWith('||');
-}
-
-function parseFilterList(text) {
-  const lines = text.split('\n');
-  const rules = [];
-  const cosmetics = [];
-  for (const raw of lines) {
-    const line = raw.trim();
-    if (!line || line.startsWith('!') || line.startsWith('[')) continue;
-    if (line.startsWith('#') && !line.includes('##')) continue;
-
-    if (line.includes('##')) {
-      const parts = line.split('##');
-      cosmetics.push({ domain: parts[0] || null, selector: parts[1] });
-      continue;
-    }
-
-    let dnrLine = line;
-    let isAllow = false;
-
-    if (isHostsLine(line)) {
-      const host = extractHostFromHostsLine(line);
-      if (!host) continue;
-      dnrLine = '||' + host + '^';
-    } else if (isBareDomain(line)) {
-      dnrLine = '||' + line + '^';
-    } else if (line.startsWith('@@')) {
-      isAllow = true;
-      dnrLine = line.slice(2).trim();
-    } else if (line.startsWith('||')) {
-      dnrLine = line;
-    } else if (line.includes('^')) {
-      dnrLine = line;
-    } else {
-      dnrLine = '||' + line + '^';
-    }
-
-    let filter = dnrLine;
-    let domainRestrict = null;
-    const domainMatch = filter.match(/\$domain=([^$|]+)/);
-    if (domainMatch) {
-      domainRestrict = domainMatch[1].split('|');
-      filter = filter.replace(/\$domain=[^$|]+/, '');
-    }
-    const thirdParty = /\$third-party/.test(filter) && !/\$~third-party/.test(filter);
-    const firstParty = /\$~third-party/.test(filter);
-    filter = filter.replace(/\$~?third-party/, '').replace(/\$popup/, '');
-    filter = filter.replace(/~[\w-]+/g, '').replace(/\$[\w-]+(=[^$]+)?/g, '').trim();
-    if (!filter || filter.startsWith('##')) continue;
-
-    const condition = {};
-    condition.urlFilter = filter;
-    condition.resourceTypes = ["script", "xmlhttprequest", "image", "stylesheet", "font", "media", "websocket", "other", "sub_frame"];
-    if (thirdParty) condition.domainType = "thirdParty";
-    if (firstParty) condition.domainType = "firstParty";
-    if (domainRestrict) condition.initiatorDomains = domainRestrict;
-    rules.push({
-      action: { type: isAllow ? 'allow' : 'block' },
-      condition
-    });
-  }
-  return { rules, cosmetics };
-}
-
-async function fetchFilterList(url) {
-  const resp = await fetch(url, { signal: AbortSignal.timeout(30000) });
-  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-  return await resp.text();
-}
-
-async function updateFilterLists() {
-  await loadFilterListEnabledStates();
-  const meta = await getFilterMeta();
-  const now = Date.now();
-  const merged = [];
-  const mergedCosmetics = [];
-  const parsedLists = [];
-  let id = FILTER_RULE_START;
-  const idSet = new Set();
-
-  for (const fl of FILTER_LISTS) {
-    if (!fl.enabled) continue;
-    try {
-      const text = await fetchFilterList(fl.url);
-      const p = parseFilterList(text);
-      parsedLists.push({ fl, parsed: p });
-      mergedCosmetics.push(...p.cosmetics);
-    } catch (e) {
-      meta[fl.name] = { updated: meta[fl.name]?.updated || 0, count: meta[fl.name]?.count || 0, error: e.message };
-      console.warn(`DurgaShield: failed to fetch ${fl.name}:`, e);
-    }
-  }
-  // Distribute rule budget proportionally among successfully parsed lists
-  const totalAvailable = parsedLists.reduce((s, p) => s + Math.min(p.parsed.rules.length, p.fl.maxRules || 500), 0);
-  for (const { fl, parsed } of parsedLists) {
-    const share = Math.max(1, Math.floor(FILTER_RULE_MAX * Math.min(parsed.rules.length, fl.maxRules || 500) / totalAvailable));
-    let taken = 0;
-    for (const rule of parsed.rules) {
-      if (taken >= share || taken >= (fl.maxRules || 500) || merged.length >= FILTER_RULE_MAX) break;
-      if (idSet.has(id)) { id++; continue; }
-      merged.push({ ...rule, id: id++ });
-      idSet.add(id - 1);
-      taken++;
-    }
-    meta[fl.name] = { updated: now, count: taken, total: parsed.rules.length, error: null };
-    console.log(`DurgaShield: updated ${fl.name} (${parsed.rules.length} rules, used ${taken}/${share})`);
-  }
-  meta.lastUpdate = now;
-  await saveFilterMeta(meta);
-  await saveStoredFilterRules(merged);
-  await chrome.storage.local.set({ durgashield_cosmetic_filters: mergedCosmetics });
-  await reconcileDynamicRules();
-  const tabs = await chrome.tabs.query({});
-  for (const tab of tabs) {
-    try { chrome.tabs.sendMessage(tab.id, { type: 'cosmeticFilters', cosmetics: mergedCosmetics }); } catch (e) {}
-  }
-  return { rules: merged, cosmetics: mergedCosmetics };
-}
-
-async function restoreFilterRules() {
-  await loadFilterListEnabledStates();
-  const meta = await getFilterMeta();
-  const now = Date.now();
-  if (meta.lastUpdate && (now - meta.lastUpdate) < UPDATE_INTERVAL) {
-    const stored = await getStoredFilterRules();
-    if (stored.length > 0) {
-      await reconcileDynamicRules();
-      console.log(`DurgaShield: restored ${stored.length} filter rules from storage`);
-      return stored;
-    }
-  }
-  return await updateFilterLists();
-}
-
-async function getFilterListStatus() {
-  await loadFilterListEnabledStates();
-  const meta = await getFilterMeta();
-  return FILTER_LISTS.map(fl => ({
-    id: fl.id,
-    name: fl.name,
-    url: fl.url,
-    enabled: fl.enabled,
-    updated: meta[fl.name]?.updated || 0,
-    count: meta[fl.name]?.count || 0,
-    total: meta[fl.name]?.total || 0,
-    maxRules: fl.maxRules || 0,
-    error: meta[fl.name]?.error || null
-  }));
-}
-
-async function getDynamicRuleCount() {
-  try {
-    const rules = await chrome.declarativeNetRequest.getDynamicRules();
-    return rules.length;
-  } catch { return 0; }
-}
-
-async function getFilteredListInfo(hostname) {
-  const rules = await getStoredFilterRules();
-  const matching = rules.filter(r => {
-    const uf = r.condition?.urlFilter || '';
-    const h = hostname.replace(/^www\./, '');
-    return uf.includes(h) || uf.includes(h.split('.').slice(-2).join('.'));
-  });
-  return { total: rules.length, matching: matching.slice(0, 20) };
-}
 
 /* ---------- JS Blocking (per-site & global) ---------- */
 const JS_SETTINGS_KEY = 'durgashield_js_settings';
 const CUSTOM_RULES_KEY = 'durgashield_custom_rules';
 const DISABLED_RULES_KEY = 'durgashield_disabled_rules';
 const JS_RULE_START = 700000;
-const CUSTOM_RULE_START = 701000;
+const JS_RULE_MAX = 1800;
+const CUSTOM_RULE_START = 800000;
 
 async function getJsSettings() {
-  const r = await chrome.storage.local.get(JS_SETTINGS_KEY);
+  const r = await _b.storage.local.get(JS_SETTINGS_KEY);
   return r[JS_SETTINGS_KEY] || { global: true, sites: {} };
 }
 async function saveJsSettings(s) {
-  await chrome.storage.local.set({ [JS_SETTINGS_KEY]: s });
+  await _b.storage.local.set({ [JS_SETTINGS_KEY]: s });
 }
 async function getCustomRules() {
-  const r = await chrome.storage.local.get(CUSTOM_RULES_KEY);
+  const r = await _b.storage.local.get(CUSTOM_RULES_KEY);
   return r[CUSTOM_RULES_KEY] || [];
 }
 async function saveCustomRules(rules) {
-  await chrome.storage.local.set({ [CUSTOM_RULES_KEY]: rules });
+  await _b.storage.local.set({ [CUSTOM_RULES_KEY]: rules });
 }
 async function getDisabledRuleIds() {
-  const r = await chrome.storage.local.get(DISABLED_RULES_KEY);
+  const r = await _b.storage.local.get(DISABLED_RULES_KEY);
   return r[DISABLED_RULES_KEY] || [];
 }
 async function saveDisabledRuleIds(ids) {
-  await chrome.storage.local.set({ [DISABLED_RULES_KEY]: ids });
+  await _b.storage.local.set({ [DISABLED_RULES_KEY]: ids });
 }
 
 function buildJsBlockingRules(settings) {
   const rules = [];
   let id = JS_RULE_START;
   const g = settings.global !== false;
+  const maxSiteRules = JS_RULE_MAX;
 
   if (!g) {
     rules.push({
-      id: id++, priority: 1, action: { type: 'block' },
+      id: id++, priority: PRIORITY.DEFAULT, action: { type: 'block' },
       condition: { urlFilter: 'http', resourceTypes: ['script'] }
     });
+    let siteCount = 0;
     for (const [host, enabled] of Object.entries(settings.sites)) {
+      if (siteCount >= maxSiteRules) break;
       if (enabled) {
         rules.push({
-          id: id++, priority: 10, action: { type: 'allow' },
+          id: id++, priority: PRIORITY.DEFAULT + 1, action: { type: 'allow' },
           condition: { initiatorDomains: [host], resourceTypes: ['script'] }
         });
+        siteCount++;
       }
     }
   } else {
+    let siteCount = 0;
     for (const [host, enabled] of Object.entries(settings.sites)) {
+      if (siteCount >= maxSiteRules) break;
       if (!enabled) {
         rules.push({
-          id: id++, priority: 1, action: { type: 'block' },
+          id: id++, priority: PRIORITY.DEFAULT, action: { type: 'block' },
           condition: { initiatorDomains: [host], resourceTypes: ['script'] }
         });
+        siteCount++;
       }
     }
   }
@@ -379,62 +274,108 @@ function buildGoogleSafeRules() {
   return rules;
 }
 
-async function applyGoogleSessionRules() {
+async function applySessionRules() {
   try {
     const safeRules = buildGoogleSafeRules();
-    const oldSession = await chrome.declarativeNetRequest.getSessionRules();
-    const oldIds = oldSession.map(r => r.id);
-    await chrome.declarativeNetRequest.updateSessionRules({
-      removeRuleIds: oldIds,
+    const existing = await _b.declarativeNetRequest.getDynamicRules();
+    const oldSafeIds = existing.filter(r => r.id >= GOOGLE_SAFE_START && r.id < GOOGLE_SAFE_START + 200).map(r => r.id);
+    await _b.declarativeNetRequest.updateDynamicRules({
+      removeRuleIds: oldSafeIds,
       addRules: safeRules
     });
   } catch (e) {
-    console.warn('DurgaShield: applyGoogleSessionRules error:', e);
+    console.warn('DurgaShield: applySessionRules error:', e);
   }
 }
+
+let _reconcileTimer = 0;
+let _reconcilePromise = null;
 
 async function reconcileDynamicRules() {
-  const filterRules = await getStoredFilterRules();
-  const jsSettings = await getJsSettings();
-  const customRules = await getCustomRules();
-  const disabledIds = await getDisabledRuleIds();
-  const disabledSet = new Set(disabledIds);
+  // Debounce: cancel pending reconciliation on rapid toggles
+  if (_reconcileTimer) clearTimeout(_reconcileTimer);
+  if (!_reconcilePromise) {
+    _reconcilePromise = new Promise(resolve => {
+      _reconcileTimer = setTimeout(async () => {
+        _reconcileTimer = 0;
+        try {
+          const jsSettings = await getJsSettings();
+          const customRules = await getCustomRules();
+          const disabledIds = await getDisabledRuleIds();
+          const disabledSet = new Set(disabledIds);
+          const config = await getConfig();
+          const perfMode = config.perfMode || 'balanced';
 
-  const jsRules = buildJsBlockingRules(jsSettings);
-  const customDnrRules = customRules.map(r => ({
-    id: CUSTOM_RULE_START + r.id, priority: r.priority || 100,
-    action: { type: r.action || 'block' },
-    condition: { urlFilter: r.pattern, ...(r.resourceTypes ? { resourceTypes: r.resourceTypes.split(',') } : {}) }
-  }));
-  const headerRules = buildPrivacyHeaderRules();
-  const autoTracked = await getAutoTracked();
-  const actions = await getTrackerActions();
-  const cookieBlockDomains = [];
-  const autoTrackerRules = buildAutoTrackerRules(autoTracked, actions, cookieBlockDomains);
-  // Also add any domains with explicit cookie-block action that aren't auto-tracked
-  for (const [domain, action] of Object.entries(actions)) {
-    if (action === 'cookie-block' && !autoTracked.includes(domain) && !cookieBlockDomains.includes(domain)) {
-      cookieBlockDomains.push(domain);
-    }
+          const all = [];
+
+          // Privacy header rules – respect enhancedTracking feature flag
+          if (config.enhancedTracking !== false) {
+            const headerRules = buildPrivacyHeaderRules();
+            all.push(...headerRules);
+          }
+
+          // JS blocking rules – always applied
+          const jsRules = buildJsBlockingRules(jsSettings);
+          all.push(...jsRules);
+
+          // Auto-tracker & cookie blocking – respect enhancedTracking + perfMode
+          if (config.enhancedTracking !== false) {
+            const autoTracked = await getAutoTracked();
+            const actions = await getTrackerActions();
+            const cookieBlockDomains = [];
+            let maxTrackerRules = 5000;
+            if (perfMode === 'lite') maxTrackerRules = 500;
+            else if (perfMode === 'balanced') maxTrackerRules = 2500;
+            const autoTrackerRules = buildAutoTrackerRules(autoTracked, actions, cookieBlockDomains, maxTrackerRules);
+            for (const [domain, action] of Object.entries(actions)) {
+              if (action === 'cookie-block' && !autoTracked.includes(domain) && !cookieBlockDomains.includes(domain)) {
+                cookieBlockDomains.push(domain);
+              }
+            }
+            const cookieBlockRules = buildCookieBlockRules(cookieBlockDomains);
+            all.push(...autoTrackerRules);
+            all.push(...cookieBlockRules);
+          }
+
+          // Content control (adult/gambling/violence)
+          if (config['cc-adult'] || config['cc-gambling'] || config['cc-violence']) {
+            const contentControlRules = buildContentControlRules(config);
+            all.push(...contentControlRules);
+          }
+
+          // Custom DNR rules
+          const customDnrRules = customRules.map(r => ({
+            id: CUSTOM_RULE_START + r.id, priority: r.priority || 100,
+            action: { type: r.action || 'block' },
+            condition: { urlFilter: r.pattern, ...(r.resourceTypes ? { resourceTypes: r.resourceTypes.split(',') } : {}) }
+          }));
+          all.push(...customDnrRules);
+
+          const finalRules = all.filter(r => !disabledSet.has(r.id));
+          await applyDynamicRules(finalRules);
+          await applySessionRules();
+        } finally {
+          _reconcilePromise = null;
+          resolve();
+        }
+      }, 100);
+    });
   }
-  const cookieBlockRules = buildCookieBlockRules(cookieBlockDomains);
-  const config = await getConfig();
-  const contentControlRules = buildContentControlRules(config);
-
-  const all = [...filterRules, ...headerRules, ...jsRules, ...autoTrackerRules, ...cookieBlockRules, ...customDnrRules, ...contentControlRules].filter(r => !disabledSet.has(r.id));
-  await applyDynamicRules(all);
-  await applyGoogleSessionRules();
+  return _reconcilePromise;
 }
 
+// Register reconcile callback with filter engine module
+setReconcileCallback(reconcileDynamicRules);
+
 async function getConfig() {
-  const r = await chrome.storage.local.get(STORAGE_KEY);
+  const r = await _b.storage.local.get(STORAGE_KEY);
   return r[STORAGE_KEY] || { ...DEFAULT_CONFIG };
 }
 async function saveConfig(config) {
-  await chrome.storage.local.set({ [STORAGE_KEY]: config });
+  await _b.storage.local.set({ [STORAGE_KEY]: config });
 }
 async function getStats() {
-  const r = await chrome.storage.local.get(STATS_KEY);
+  const r = await _b.storage.local.get(STATS_KEY);
   return r[STATS_KEY] || { total: 0, today: 0, date: new Date().toDateString() };
 }
 async function incrementStats(n) {
@@ -451,7 +392,7 @@ async function incrementStats(n) {
     const oldest = days.sort()[0];
     delete stats.byDay[oldest];
   }
-  await chrome.storage.local.set({ [STATS_KEY]: stats });
+  await _b.storage.local.set({ [STATS_KEY]: stats });
 }
 
 async function getDailyStats() {
@@ -467,113 +408,29 @@ async function getDailyStats() {
   return result;
 }
 async function getWhitelist() {
-  const r = await chrome.storage.local.get(WHITELIST_KEY);
+  const r = await _b.storage.local.get(WHITELIST_KEY);
   return r[WHITELIST_KEY] || [];
 }
 async function saveWhitelist(list) {
-  await chrome.storage.local.set({ [WHITELIST_KEY]: list });
+  await _b.storage.local.set({ [WHITELIST_KEY]: list });
 }
 async function getHideRules() {
-  const r = await chrome.storage.local.get(HIDE_RULES_KEY);
+  const r = await _b.storage.local.get(HIDE_RULES_KEY);
   return r[HIDE_RULES_KEY] || {};
 }
 async function saveHideRules(rules) {
-  await chrome.storage.local.set({ [HIDE_RULES_KEY]: rules });
+  await _b.storage.local.set({ [HIDE_RULES_KEY]: rules });
 }
 async function getSiteStats() {
-  const r = await chrome.storage.local.get(SITE_STATS_KEY);
+  const r = await _b.storage.local.get(SITE_STATS_KEY);
   return r[SITE_STATS_KEY] || {};
 }
 async function saveSiteStats(stats) {
-  await chrome.storage.local.set({ [SITE_STATS_KEY]: stats });
-}
-
-/* ---------- Privacy Badger Features ---------- */
-async function getTrackerMap() {
-  const r = await chrome.storage.local.get(TRACKER_MAP_KEY);
-  return r[TRACKER_MAP_KEY] || {};
-}
-async function saveTrackerMap(m) {
-  await chrome.storage.local.set({ [TRACKER_MAP_KEY]: m });
-}
-async function getAutoTracked() {
-  const r = await chrome.storage.local.get(AUTO_TRACKED_KEY);
-  return r[AUTO_TRACKED_KEY] || [];
-}
-async function saveAutoTracked(list) {
-  await chrome.storage.local.set({ [AUTO_TRACKED_KEY]: list });
-}
-async function getTrackerActions() {
-  const r = await chrome.storage.local.get(TRACKER_ACTIONS_KEY);
-  return r[TRACKER_ACTIONS_KEY] || {};
-}
-async function saveTrackerActions(actions) {
-  await chrome.storage.local.set({ [TRACKER_ACTIONS_KEY]: actions });
-}
-
-const TRACKER_ACTIONS_KEY = 'durgashield_tracker_actions';
-
-function classifyTrackerDomain(domain) {
-  const adDomains = ['doubleclick.net', 'googlesyndication.com', 'googleadservices.com', 'adservice.google.com', 'adsafeprotected.com', 'adnxs.com', 'rubiconproject.com', 'criteo.com', 'criteo.net', 'outbrain.com', 'taboola.com', 'scorecardresearch.com', 'quantserve.com', 'exelator.com', 'bluekai.com', 'agkn.com', 'casalemedia.com', 'addthis.com', 'moatads.com', 'pubmatic.com', 'openx.net', 'appnexus.com', 'sharethrough.com'];
-  const analyticsDomains = ['google-analytics.com', 'googletagmanager.com', 'gtagmanager.com', 'analytics.google.com', 'facebook.com/tr', 'connect.facebook.net', 'pixel.quantserve.com', 'scorecardresearch.com', 'hotjar.com', 'mouseflow.com', 'fullstory.com', 'mixpanel.com', 'amplitude.com', 'segment.io', 'segment.com', 'heap.io', 'clicky.com', 'matomo.org', 'piwik.org', 'piwik.pro', 'woopra.com', 'mouseflow.com', 'luckyorange.com', 'crazyegg.com', 'clarity.ms', 'bing.com/collect'];
-  const socialDomains = ['facebook.com', 'facebook.net', 'fbcdn.net', 'twitter.com', 'twimg.com', 'linkedin.com', 'linkedin.com/li', 'pinterest.com', 'instagram.com', 't.co', 'bit.ly', 'ow.ly', 'tinyurl.com', 'reddit.com', 'youtube.com', 'ytimg.com'];
-  const cdnDomains = ['cdn.jsdelivr.net', 'cdnjs.cloudflare.com', 'unpkg.com', 'cdn.jsdelivr.net', 'stackpathcdn.com', 'fastly.net', 'cloudfront.net', 'akamaihd.net', 'akamaiedge.net', 'azureedge.net', 'netdna-ssl.com', 'netdna.com', 'bootstrapcdn.com', 'maxcdn.com', 'jsdelivr.net', 'cloudflare.com', 'cloudflare.net', 'googleapis.com', 'gstatic.com'];
-  const hostingDomains = ['github.io', 'gitlab.io', 'bitbucket.io', 'netlify.com', 'vercel.app', 'pages.dev', 'firebaseapp.com', 'web.app', 'herokuapp.com', 'azurewebsites.net', 'awsapps.com', 'amazonaws.com', 's3.amazonaws.com'];
-  const fontDomains = ['fonts.googleapis.com', 'fonts.gstatic.com', 'use.typekit.net', 'fonts.cdnfonts.com', 'fontawesome.com', 'use.fontawesome.com'];
-  const d = domain.replace(/^www\./, '');
-  for (const ad of adDomains) { if (d.endsWith(ad) || d === ad) return 'Advertising'; }
-  for (const ad of analyticsDomains) { if (d.endsWith(ad) || d === ad) return 'Analytics'; }
-  for (const ad of socialDomains) { if (d.endsWith(ad) || d === ad) return 'Social Media'; }
-  for (const ad of cdnDomains) { if (d.endsWith(ad) || d === ad) return 'CDN'; }
-  for (const ad of fontDomains) { if (d.endsWith(ad) || d === ad) return 'Fonts'; }
-  for (const ad of hostingDomains) { if (d.endsWith(ad) || d === ad) return 'Hosting'; }
-  return 'Other';
-}
-
-async function reportThirdParties(domains, host) {
-  const map = await getTrackerMap();
-  for (const d of domains) {
-    if (!map[d]) map[d] = { sites: [], category: classifyTrackerDomain(d) };
-    if (!map[d].sites.includes(host)) map[d].sites.push(host);
-    if (map[d].sites.length > 100) map[d].sites = map[d].sites.slice(-100);
-  }
-  const entries = Object.entries(map);
-  if (entries.length > 500) {
-    const sorted = entries.sort((a, b) => b[1].sites.length - a[1].sites.length);
-    const pruned = Object.fromEntries(sorted.slice(0, 500));
-    await saveTrackerMap(pruned);
-  } else {
-    await saveTrackerMap(map);
-  }
-}
-
-async function getDetectedTrackers() {
-  const map = await getTrackerMap();
-  const actions = await getTrackerActions();
-  const tracked = await getAutoTracked();
-  return Object.entries(map).map(([domain, info]) => ({
-    domain,
-    category: info.category || 'Other',
-    sites: info.sites ? info.sites.length : 0,
-    action: actions[domain] || (tracked.includes(domain) ? 'block' : 'none')
-  }));
-}
-
-async function getTrackerCategories() {
-  const trackers = await getDetectedTrackers();
-  const categories = {};
-  let blocked = 0;
-  for (const t of trackers) {
-    const cat = t.category || 'Other';
-    if (!categories[cat]) categories[cat] = { count: 0 };
-    categories[cat].count++;
-    if (t.action === 'block') blocked++;
-  }
-  return { total: trackers.length, blocked, categories, domains: trackers };
+  await _b.storage.local.set({ [SITE_STATS_KEY]: stats });
 }
 
 async function getYouTubeWhitelist() {
-  const r = await chrome.storage.local.get(YT_WHITELIST_KEY);
+  const r = await _b.storage.local.get(YT_WHITELIST_KEY);
   return r[YT_WHITELIST_KEY] || [];
 }
 
@@ -581,7 +438,7 @@ async function addYouTubeWhitelist(channelId, channelName) {
   const list = await getYouTubeWhitelist();
   if (!list.find(c => c.id === channelId)) {
     list.push({ id: channelId, name: channelName });
-    await chrome.storage.local.set({ [YT_WHITELIST_KEY]: list });
+    await _b.storage.local.set({ [YT_WHITELIST_KEY]: list });
   }
   return list;
 }
@@ -589,18 +446,16 @@ async function addYouTubeWhitelist(channelId, channelName) {
 async function removeYouTubeWhitelist(channelId) {
   const list = await getYouTubeWhitelist();
   const filtered = list.filter(c => c.id !== channelId);
-  await chrome.storage.local.set({ [YT_WHITELIST_KEY]: filtered });
+  await _b.storage.local.set({ [YT_WHITELIST_KEY]: filtered });
   return filtered;
 }
 
-const GPC_RULE_ID = 800000;
-const DNT_RULE_ID = 800001;
-const XFO_RULE_ID = 800002;
-const XCTO_RULE_ID = 800003;
-const RP_RULE_ID = 800004;
-const PP_RULE_ID = 800005;
-const AUTO_TRACKER_START = 800100;
-const COOKIE_BLOCK_START = 900000;
+const GPC_RULE_ID = 999000;
+const DNT_RULE_ID = 999001;
+const XFO_RULE_ID = 999002;
+const XCTO_RULE_ID = 999003;
+const RP_RULE_ID = 999004;
+const PP_RULE_ID = 999005;
 const CC_START = 950000;
 const GOOGLE_SAFE_START = 970000;
 const CC_DOMAINS = {
@@ -612,15 +467,103 @@ const CC_DOMAINS = {
 function buildContentControlRules(config) {
   const rules = [];
   let id = CC_START;
+  const DOMAIN_CAP = 200;
+  let count = 0;
   for (const [key, domains] of Object.entries(CC_DOMAINS)) {
     if (config[key] !== true) continue;
     for (const domain of domains) {
+      if (count >= DOMAIN_CAP) break;
       rules.push({
         id: id++, priority: 5,
         action: { type: 'block' },
         condition: { urlFilter: '||' + domain + '^', resourceTypes: ['main_frame','sub_frame','script','image','stylesheet','font','media','xmlhttprequest','other'] }
       });
+      count++;
     }
+    if (count >= DOMAIN_CAP) break;
+  }
+  return rules;
+}
+
+function buildPrivacyHeaderRules() {
+  const rules = [];
+  let id = HEADER_RULE_START;
+  const headerSites = [
+    'google.com', 'youtube.com', 'facebook.com', 'twitter.com', 'x.com',
+    'instagram.com', 'linkedin.com', 'reddit.com', 'amazon.com',
+    'stackoverflow.com', 'github.com', 'gitlab.com', 'bitbucket.org'
+  ];
+  for (const site of headerSites) {
+    rules.push({
+      id: id++, priority: 30,
+      action: {
+        type: 'modifyHeaders',
+        requestHeaders: [
+          { header: 'x-forwarded-for', operation: 'remove' },
+          { header: 'via', operation: 'remove' }
+        ]
+      },
+      condition: {
+        urlFilter: '||' + site + '^',
+        resourceTypes: ['main_frame', 'xmlhttprequest']
+      }
+    });
+    rules.push({
+      id: id++, priority: 30,
+      action: {
+        type: 'modifyHeaders',
+        responseHeaders: [
+          { header: 'server', operation: 'remove' },
+          { header: 'x-powered-by', operation: 'remove' }
+        ]
+      },
+      condition: {
+        urlFilter: '||' + site + '^',
+        resourceTypes: ['main_frame', 'xmlhttprequest']
+      }
+    });
+  }
+  return rules;
+}
+
+function buildAutoTrackerRules(autoTracked, actions, cookieBlockDomains, maxRules) {
+  const rules = [];
+  let id = AUTO_TRACKER_START;
+  const limit = maxRules || 5000;
+  for (const domain of autoTracked) {
+    const action = actions[domain] || 'block';
+    if (action === 'cookie-block') {
+      if (!cookieBlockDomains.includes(domain)) cookieBlockDomains.push(domain);
+      continue;
+    }
+    if (action === 'block') {
+      if (rules.length >= limit) break;
+      rules.push({
+        id: id++, priority: PRIORITY.PRIVACY,
+        action: { type: 'block' },
+        condition: {
+          urlFilter: '||' + domain + '^',
+          resourceTypes: ['script', 'xmlhttprequest', 'image', 'media', 'font', 'other']
+        }
+      });
+    }
+  }
+  return rules;
+}
+
+function buildCookieBlockRules(domains) {
+  const rules = [];
+  let id = COOKIE_BLOCK_START;
+  for (const domain of domains) {
+    if (rules.length >= 1000) break;
+    rules.push({
+      id: id++, priority: 25,
+      action: { type: 'block' },
+      condition: {
+        urlFilter: '||' + domain + '^',
+        resourceTypes: ['script', 'xmlhttprequest', 'image', 'other']
+      }
+    });
   }
   return rules;
 }
@@ -633,7 +576,7 @@ async function handleBrowserCleanup(message) {
   if (message.history) options.history = {};
   const since = message.since || 0;
   try {
-    await chrome.browsingData.remove({ since }, options);
+    await _b.browsingData.remove({ since }, options);
     return { success: true };
   } catch (e) {
     return { success: false, error: e.message };
@@ -642,7 +585,7 @@ async function handleBrowserCleanup(message) {
 
 /* ---------- Site Permissions Monitor ---------- */
 async function getSitePermissions() {
-  const r = await chrome.storage.local.get(PERMISSIONS_KEY);
+  const r = await _b.storage.local.get(PERMISSIONS_KEY);
   return r[PERMISSIONS_KEY] || [];
 }
 
@@ -655,7 +598,7 @@ async function trackSitePermission(host, permission) {
   } else {
     list.push({ host, permissions: [permission], firstSeen: Date.now(), lastSeen: Date.now() });
   }
-  await chrome.storage.local.set({ [PERMISSIONS_KEY]: list });
+  await _b.storage.local.set({ [PERMISSIONS_KEY]: list });
 }
 
 async function cookieSelfDestruct() {
@@ -665,13 +608,13 @@ async function cookieSelfDestruct() {
   if (!stealth.selfDestructCookies) return;
   const whitelist = await getWhitelist();
   try {
-    const cookies = await chrome.cookies.getAll({});
+    const cookies = await _b.cookies.getAll({});
     for (const c of cookies) {
       if (whitelist.some(w => c.domain.includes(w))) continue;
       if (c.session) continue;
       const age = Date.now() - (c.lastAccessDate ? new Date(c.lastAccessDate).getTime() : Date.now());
       if (age > 3600000) {
-        await chrome.cookies.remove({
+        await _b.cookies.remove({
           name: c.name, url: (c.secure ? 'https' : 'http') + '://' + c.domain.replace(/^\./, '') + c.path,
           storeId: c.storeId
         });
@@ -712,9 +655,9 @@ async function installHTTPSEnforcement() {
   try {
     const config = await getConfig();
     if (config.httpsEnforce !== true) return;
-    const existing = await chrome.declarativeNetRequest.getDynamicRules();
+    const existing = await _b.declarativeNetRequest.getDynamicRules();
     const oldIds = existing.filter(r => r.id >= HTTPS_ENFORCE_START && r.id < HTTPS_ENFORCE_START + 1000).map(r => r.id);
-    await chrome.declarativeNetRequest.updateDynamicRules({
+    await _b.declarativeNetRequest.updateDynamicRules({
       removeRuleIds: oldIds,
       addRules: httpsEnforceRules
     });
@@ -723,16 +666,14 @@ async function installHTTPSEnforcement() {
 async function removeHTTPSEnforcement() {
   try {
     const oldIds = Array.from({ length: HTTPS_ENFORCE_LIST.length }, (_, i) => HTTPS_ENFORCE_START + i);
-    await chrome.declarativeNetRequest.updateDynamicRules({ removeRuleIds: oldIds, addRules: [] });
+    await _b.declarativeNetRequest.updateDynamicRules({ removeRuleIds: oldIds, addRules: [] });
   } catch (e) {}
 }
 
 /* ---------- Password Leak Detection ---------- */
 const PASSWORD_LEAK_KEY = 'durgashield_password_leaks';
-async function checkPasswordLeak(password) {
+async function checkPasswordLeak(hashHex) {
   try {
-    const hash = await crypto.subtle.digest('SHA-1', new TextEncoder().encode(password));
-    const hashHex = Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase();
     const prefix = hashHex.substring(0, 5);
     const suffix = hashHex.substring(5);
     const resp = await fetch('https://api.pwnedpasswords.com/range/' + prefix);
@@ -745,7 +686,7 @@ async function checkPasswordLeak(password) {
         const leaks = await getPasswordLeaks();
         leaks.push({ hash: hashHex.substring(0, 10) + '...', count: parseInt(count || '0'), checked: Date.now() });
         if (leaks.length > 50) leaks.splice(0, leaks.length - 50);
-        await chrome.storage.local.set({ [PASSWORD_LEAK_KEY]: leaks });
+        await _b.storage.local.set({ [PASSWORD_LEAK_KEY]: leaks });
         return { compromised: true, count: parseInt(count) };
       }
     }
@@ -753,11 +694,11 @@ async function checkPasswordLeak(password) {
   } catch (e) { return { compromised: false, error: e.message }; }
 }
 async function getPasswordLeaks() {
-  const r = await chrome.storage.local.get(PASSWORD_LEAK_KEY);
+  const r = await _b.storage.local.get(PASSWORD_LEAK_KEY);
   return r[PASSWORD_LEAK_KEY] || [];
 }
 async function clearPasswordLeaks() {
-  await chrome.storage.local.set({ [PASSWORD_LEAK_KEY]: [] });
+  await _b.storage.local.set({ [PASSWORD_LEAK_KEY]: [] });
 }
 
 /* ---------- Notification Batching ---------- */
@@ -777,12 +718,12 @@ async function flushNotifications() {
   const latest = notifQueue[notifQueue.length - 1];
   notifQueue.length = 0;
   if (count === 1) {
-    await chrome.notifications.create('batch-' + Date.now(), {
+    await _b.notifications.create('batch-' + Date.now(), {
       type: 'basic', iconUrl: 'icons/icon-128.svg',
       title: latest.title, message: latest.message, priority: 1
     });
   } else {
-    await chrome.notifications.create('batch-' + Date.now(), {
+    await _b.notifications.create('batch-' + Date.now(), {
       type: 'basic', iconUrl: 'icons/icon-128.svg',
       title: 'DurgaShield (' + count + ' notifications)',
       message: count + ' events since last notification: ' + latest.title,
@@ -791,27 +732,69 @@ async function flushNotifications() {
   }
 }
 
+/* ---------- Smart Rule Pruning ---------- */
+const RULE_USAGE_KEY = 'durgashield_rule_usage';
+const PRUNE_INTERVAL = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+async function getRuleUsage() {
+  const r = await _b.storage.local.get(RULE_USAGE_KEY);
+  return r[RULE_USAGE_KEY] || {};
+}
+async function saveRuleUsage(usage) {
+  await _b.storage.local.set({ [RULE_USAGE_KEY]: usage });
+}
+
+async function recordRuleHit(ruleId) {
+  const usage = await getRuleUsage();
+  usage[ruleId] = (usage[ruleId] || 0) + 1;
+  await saveRuleUsage(usage);
+}
+
+async function pruneUnusedRules() {
+  const now = Date.now();
+  const meta = await getFilterMeta();
+  const lastPrune = meta.lastPrune || 0;
+  if (now - lastPrune < PRUNE_INTERVAL) return;
+  meta.lastPrune = now;
+  await saveFilterMeta(meta);
+  // DNR rules are generated dynamically from the compiled index.
+  // Pruning individual DNR rule IDs is no longer applicable since
+  // rules are regenerated on each reconcile. Future optimization:
+  // remove unused patterns from the compiled index based on usage stats.
+}
+
 /* ---------- Filtering Log ---------- */
 async function getFilterLog() {
-  const r = await chrome.storage.local.get(FILTER_LOG_KEY);
-  return r[FILTER_LOG_KEY] || [];
+  return getLogsIDB(2000, 0);
+}
+async function clearFilterLog() {
+  await clearLogsIDB();
+}
+async function cleanFilterLog() {
+  const log = await getFilterLog();
+  const cleaned = log.filter(e => { try { new URL(e.url || ''); return true; } catch { return false; } });
+  if (cleaned.length !== log.length) {
+    await clearLogsIDB();
+    for (const entry of cleaned) await addLogEntryIDB(entry);
+  }
+}
+async function exportFilterLog() {
+  return exportLogsIDB();
 }
 async function addFilterLogEntry(entry) {
   let url = entry.url || '';
   try { new URL(url); } catch { url = ''; }
   if (!url) return;
-  let log = await getFilterLog();
-  log.unshift({ ...entry, url, ts: Date.now() });
-  if (log.length > 200) log = log.slice(0, 200);
-  await chrome.storage.local.set({ [FILTER_LOG_KEY]: log });
+  entry = { ...entry, url, ts: Date.now() };
+  await addLogEntryIDB(entry);
 }
 async function clearFilterLog() {
-  await chrome.storage.local.set({ [FILTER_LOG_KEY]: [] });
+  await _b.storage.local.set({ [FILTER_LOG_KEY]: [] });
 }
 async function cleanFilterLog() {
   const log = await getFilterLog();
   const cleaned = log.filter(e => { try { new URL(e.url || ''); return true; } catch { return false; } });
-  if (cleaned.length !== log.length) await chrome.storage.local.set({ [FILTER_LOG_KEY]: cleaned });
+  if (cleaned.length !== log.length) await _b.storage.local.set({ [FILTER_LOG_KEY]: cleaned });
 }
 async function exportFilterLog() {
   const log = await getFilterLog();
@@ -824,9 +807,159 @@ async function exportFilterLog() {
   return header + '\n' + rows.join('\n');
 }
 
+/* ---------- IndexedDB Log Store ---------- */
+const DB_NAME = 'DurgaShieldLogs';
+const DB_VERSION = 1;
+const STORE_NAME = 'filterLog';
+
+function openLogDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        const store = db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+        store.createIndex('ts', 'ts', { unique: false });
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => {
+      console.warn('DurgaShield: IndexedDB unavailable, falling back to storage.local');
+      resolve(null);
+    };
+  });
+}
+
+async function addLogEntryIDB(entry) {
+  const db = await openLogDB();
+  if (!db) {
+    let log = (await _b.storage.local.get(FILTER_LOG_KEY))[FILTER_LOG_KEY] || [];
+    log.unshift(entry);
+    if (log.length > 200) log = log.slice(0, 200);
+    await _b.storage.local.set({ [FILTER_LOG_KEY]: log });
+    return;
+  }
+  const tx = db.transaction(STORE_NAME, 'readwrite');
+  const store = tx.objectStore(STORE_NAME);
+  store.add({ url: entry.url || '', ruleId: entry.ruleId || '', ts: Date.now() });
+  const countReq = store.count();
+  countReq.onsuccess = () => {
+    if (countReq.result > 2000) {
+      const cursorReq = store.openCursor();
+      let deleted = 0;
+      cursorReq.onsuccess = () => {
+        const cursor = cursorReq.result;
+        if (cursor && deleted < countReq.result - 2000) {
+          store.delete(cursor.primaryKey);
+          deleted++;
+          cursor.continue();
+        }
+      };
+    }
+  };
+  return new Promise(resolve => { tx.oncomplete = () => resolve(); });
+}
+
+async function getLogsIDB(limit, offset) {
+  const db = await openLogDB();
+  if (!db) return (await getFilterLog()).slice(0, limit);
+  return new Promise(resolve => {
+    const tx = db.transaction(STORE_NAME, 'readonly');
+    const store = tx.objectStore(STORE_NAME);
+    const req = store.index('ts').openCursor(null, 'prev');
+    const results = [];
+    let skipped = 0;
+    req.onsuccess = () => {
+      const cursor = req.result;
+      if (!cursor || results.length >= limit) { resolve(results); return; }
+      if (skipped < offset) { skipped++; cursor.continue(); return; }
+      results.push({ url: cursor.value.url, ruleId: cursor.value.ruleId, ts: cursor.value.ts });
+      cursor.continue();
+    };
+  });
+}
+
+async function getLogCountIDB() {
+  const db = await openLogDB();
+  if (!db) return (await getFilterLog()).length;
+  return new Promise(resolve => {
+    const tx = db.transaction(STORE_NAME, 'readonly');
+    const req = tx.objectStore(STORE_NAME).count();
+    req.onsuccess = () => resolve(req.result);
+  });
+}
+
+async function getTopDomainsIDB(limit) {
+  const db = await openLogDB();
+  if (!db) {
+    const log = await getFilterLog();
+    return computeTopDomains(log, limit);
+  }
+  return new Promise(resolve => {
+    const tx = db.transaction(STORE_NAME, 'readonly');
+    const req = tx.objectStore(STORE_NAME).getAll();
+    req.onsuccess = () => resolve(computeTopDomains(req.result, limit));
+  });
+}
+
+function computeTopDomains(entries, limit) {
+  const counts = {};
+  for (const entry of entries) {
+    try { const host = new URL(entry.url || '').hostname || entry.url; counts[host] = (counts[host] || 0) + 1; }
+    catch { counts[entry.url] = (counts[entry.url] || 0) + 1; }
+  }
+  return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, limit || 10);
+}
+
+async function clearLogsIDB() {
+  const db = await openLogDB();
+  if (!db) { clearFilterLog(); return; }
+  return new Promise(resolve => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    tx.objectStore(STORE_NAME).clear();
+    tx.oncomplete = () => resolve();
+  });
+}
+
+async function exportLogsIDB() {
+  const db = await openLogDB();
+  if (!db) return exportFilterLog();
+  return new Promise(resolve => {
+    const tx = db.transaction(STORE_NAME, 'readonly');
+    const req = tx.objectStore(STORE_NAME).getAll();
+    req.onsuccess = () => {
+      const header = 'Timestamp,RuleID,URL';
+      const rows = (req.result || []).map(e => {
+        const ts = e.ts ? new Date(e.ts).toISOString() : '';
+        const url = (e.url || '').replace(/"/g, '""');
+        return `"${ts}","${e.ruleId || ''}","${url}"`;
+      });
+      resolve(header + '\n' + rows.join('\n'));
+    };
+  });
+}
+
+async function migrateLogsToIDB() {
+  const db = await openLogDB();
+  if (!db) return;
+  try {
+    const r = await _b.storage.local.get(FILTER_LOG_KEY);
+    const oldLogs = r[FILTER_LOG_KEY] || [];
+    if (oldLogs.length === 0) return;
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    for (const entry of oldLogs) {
+      store.add({ url: entry.url || '', ruleId: entry.ruleId || '', ts: entry.ts || Date.now() });
+    }
+    await new Promise(resolve => { tx.oncomplete = () => resolve(); });
+    await _b.storage.local.remove(FILTER_LOG_KEY);
+    console.log(`DurgaShield: migrated ${oldLogs.length} log entries to IndexedDB`);
+  } catch (e) { console.warn('DurgaShield: log migration error:', e); }
+}
+
 async function pollMatchedRules() {
   try {
-    const result = await chrome.declarativeNetRequest.getMatchedRules();
+    const result = await _b.declarativeNetRequest.getMatchedRules();
     if (!result || !result.rulesMatchedInfo) return;
     let n = 0;
     for (const m of result.rulesMatchedInfo) {
@@ -848,22 +981,23 @@ async function pollMatchedRules() {
     }
   } catch (e) {}
 }
-setInterval(pollMatchedRules, 10000);
-
-/* cookie self-destruct every 30 min */
-setInterval(cookieSelfDestruct, 1800000);
+/* ---------- Scheduled background tasks via alarms ---------- */
+// pollMatchedRules moved to alarm (reduces polling rate, survives SW restart)
+// cookieSelfDestruct moved to alarm
+// See alarm listener in the alarm setup section below
 
 async function setRuleSetEnabled(id, enabled) {
   const o = { enableRulesetIds: [], disableRulesetIds: [] };
   (enabled ? o.enableRulesetIds : o.disableRulesetIds).push(id);
-  await chrome.declarativeNetRequest.updateEnabledRulesets(o);
+  await _b.declarativeNetRequest.updateEnabledRulesets(o);
 }
 
 async function getOrCreateContainer() {
+  if (!_hasContainers) return null;
   if (containerIdentity) return containerIdentity;
   try {
-    const ids = await chrome.contextualIdentities.query({ name: CONTAINER_NAME });
-    containerIdentity = ids[0] || await chrome.contextualIdentities.create({
+    const ids = await _b.contextualIdentities.query({ name: CONTAINER_NAME });
+    containerIdentity = ids[0] || await _b.contextualIdentities.create({
       name: CONTAINER_NAME, color: 'blue', icon: 'fence'
     });
     return containerIdentity;
@@ -886,14 +1020,15 @@ function getHostname(url) {
 }
 
 async function cleanupForeignCookies() {
+  if (!_hasContainers) return;
   try {
     if (!containerIdentity) return;
     const storeId = containerIdentity.cookieStoreId;
     for (const domain of ISOLATED_DOMAINS) {
-      const cookies = await chrome.cookies.getAll({ domain });
+      const cookies = await _b.cookies.getAll({ domain });
       for (const cookie of cookies) {
         if (cookie.storeId !== storeId) {
-          await chrome.cookies.remove({
+          await _b.cookies.remove({
             name: cookie.name,
             url: (cookie.secure ? 'https' : 'http') + '://' + cookie.domain + cookie.path,
             storeId: cookie.storeId
@@ -905,6 +1040,7 @@ async function cleanupForeignCookies() {
 }
 
 async function handleContainerNavigation(details) {
+  if (!_hasContainers) return;
   if (details.frameId !== 0) return;
   if (!details.url || !details.url.startsWith('http')) return;
   const config = await getConfig();
@@ -912,26 +1048,31 @@ async function handleContainerNavigation(details) {
   const container = await getOrCreateContainer();
   if (!container) return;
   try {
-    const tab = await chrome.tabs.get(details.tabId);
+    const tab = await _b.tabs.get(details.tabId);
     if (!tab || !tab.url) return;
     const inContainer = tab.cookieStoreId === container.cookieStoreId;
     const toIsolated = isIsolatedUrl(details.url);
     if ((inContainer && toIsolated) || (!inContainer && !toIsolated)) return;
-    const newTab = await chrome.tabs.create({
-      url: details.url, active: tab.active, index: tab.index + 1,
-      ...(toIsolated ? { cookieStoreId: container.cookieStoreId } : {})
+    // Show a notification suggesting the user switch containers rather than destroying the tab
+    const siteName = new URL(details.url).hostname;
+    const nid = 'container-hint-' + details.tabId;
+    await _b.notifications.create(nid, {
+      type: 'basic', iconUrl: 'icons/icon-128.svg',
+      title: 'Container suggestion',
+      message: siteName + ' is better suited for a different container. Open the extension popup to switch.',
+      priority: 1
     });
-    await chrome.tabs.remove(details.tabId);
   } catch (e) {}
 }
 
-chrome.runtime.onInstalled.addListener(async () => {
+_b.runtime.onInstalled.addListener(async () => {
   const config = await getConfig();
   for (const [key, enabled] of Object.entries(config)) {
     if (['ads', 'malware', 'crypto', 'phishing', 'cdn', 'social', 'annoyance'].includes(key)) await setRuleSetEnabled(key, enabled);
   }
-  if (config.containerIsolation) { await getOrCreateContainer(); await cleanupForeignCookies(); }
-  await restoreFilterRules();
+  if (config.containerIsolation && _hasContainers) { await getOrCreateContainer(); await cleanupForeignCookies(); }
+  const installedIndex = await restoreFilterRules();
+  if (installedIndex) initRequestHandler(installedIndex);
   await loadCDNMap();
   await initCDNFileCache();
   if (config.cdnReplacement) installCDNReplacement();
@@ -939,15 +1080,23 @@ chrome.runtime.onInstalled.addListener(async () => {
   await installSiteAllowRules();
   await installTrackingCleaner();
   await cleanFilterLog();
+  migrateLogsToIDB(); // fire & forget
+  // Deferred regional filter loading
+  if (typeof requestIdleCallback !== 'undefined') {
+    requestIdleCallback(() => loadRegionalFilters().catch(() => {}), { timeout: 30000 });
+  } else {
+    setTimeout(() => loadRegionalFilters().catch(() => {}), 30000);
+  }
 });
 
-chrome.runtime.onStartup.addListener(async () => {
+_b.runtime.onStartup.addListener(async () => {
   const config = await getConfig();
   for (const [key, enabled] of Object.entries(config)) {
     if (['ads', 'malware', 'crypto', 'phishing', 'cdn', 'social', 'annoyance'].includes(key)) await setRuleSetEnabled(key, enabled);
   }
-  if (config.containerIsolation) { await getOrCreateContainer(); await cleanupForeignCookies(); }
-  await restoreFilterRules();
+  if (config.containerIsolation && _hasContainers) { await getOrCreateContainer(); await cleanupForeignCookies(); }
+  const startupIndex = await restoreFilterRules();
+  if (startupIndex) initRequestHandler(startupIndex);
   await loadCDNMap();
   await initCDNFileCache();
   if (config.cdnReplacement) installCDNReplacement();
@@ -960,7 +1109,11 @@ setInterval(async () => {
   const config = await getConfig();
   if (config.autoUpdate === false) return;
   getFilterMeta().then(meta => {
-    if (meta.lastUpdate && (Date.now() - meta.lastUpdate) >= UPDATE_INTERVAL) updateFilterLists();
+    if (meta.lastUpdate && (Date.now() - meta.lastUpdate) >= UPDATE_INTERVAL) {
+      updateFilterLists().then(result => {
+        if (result && result.compiled) setCompiledIndex(result.compiled, result.overflowPatterns);
+      });
+    }
   });
 }, 3600000);
 
@@ -968,9 +1121,9 @@ let webNavigationRegistered = false;
 
 async function ensureWebNavigation() {
   if (webNavigationRegistered) return true;
-  const ok = await chrome.permissions.contains({ permissions: ['webNavigation'] });
+  const ok = await _b.permissions.contains({ permissions: ['webNavigation'] });
   if (!ok) return false;
-  chrome.webNavigation.onBeforeNavigate.addListener(handleContainerNavigation);
+  _b.webNavigation.onBeforeNavigate.addListener(handleContainerNavigation);
   webNavigationRegistered = true;
   return true;
 }
@@ -981,18 +1134,19 @@ function hostFromUrl(url) {
   try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; }
 }
 
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+_b.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (sender.id !== _b.runtime.id) return;
   switch (message.type) {
-    case 'getConfig':
+    case MSG.GET_CONFIG:
       getConfig().then(sendResponse);
       return true;
-    case 'saveConfig':
+    case MSG.SAVE_CONFIG:
       saveConfig(message.config).then(async () => {
         for (const [key, enabled] of Object.entries(message.config)) {
           if (['ads', 'malware', 'crypto', 'phishing', 'cdn', 'social', 'annoyance'].includes(key)) await setRuleSetEnabled(key, enabled);
         }
         if (message.config.containerIsolation !== undefined) {
-          if (message.config.containerIsolation) {
+          if (message.config.containerIsolation && _hasContainers) {
             await ensureWebNavigation();
             await getOrCreateContainer(); await cleanupForeignCookies();
           }
@@ -1002,45 +1156,65 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           else removeCDNReplacement();
         }
         if (message.config.downloadScan !== undefined) {
-          if (message.config.downloadScan) await ensurePermissions('downloadScan');
+          if (message.config.downloadScan) {
+            const granted = await ensurePermissions('downloadScan');
+            if (granted) await registerDownloadListeners();
+          }
         }
         if (message.config.httpsEnforce !== undefined) {
           if (message.config.httpsEnforce) await installHTTPSEnforcement();
           else await removeHTTPSEnforcement();
         }
+        if (message.config.perfMode !== undefined) {
+          await reconcileDynamicRules();
+        }
         if (['cc-adult','cc-gambling','cc-violence'].some(k => message.config[k] !== undefined)) {
           await reconcileDynamicRules();
         }
-        const tabs = await chrome.tabs.query({});
+        const tabs = await _b.tabs.query({});
         for (const tab of tabs) {
-          try { chrome.tabs.sendMessage(tab.id, { type: 'configUpdated', config: message.config }); } catch (e) {}
+          try { _b.tabs.sendMessage(tab.id, { type: MSG.CONFIG_UPDATED, config: message.config }); } catch (e) {}
         }
         if (message.config.stealth !== undefined) {
           const stealth = await getStealthConfig();
           for (const tab of tabs) {
-            try { chrome.tabs.sendMessage(tab.id, { type: 'stealthUpdated', config: stealth }); } catch (e) {}
+            try { _b.tabs.sendMessage(tab.id, { type: MSG.STEALTH_UPDATED, config: stealth }); } catch (e) {}
           }
         }
         sendResponse({ success: true });
       });
       return true;
-    case 'getStats':
-      getStats().then(sendResponse);
+    case MSG.SET_ENABLED:
+      (async () => {
+        const ruleSets = ['ads', 'malware', 'crypto', 'phishing', 'cdn', 'social', 'annoyance'];
+        for (const id of ruleSets) await setRuleSetEnabled(id, message.enabled);
+        const tabs = await _b.tabs.query({});
+        for (const tab of tabs) {
+          try { _b.tabs.sendMessage(tab.id, { type: MSG.SET_ENABLED, enabled: message.enabled }); } catch (e) {}
+        }
+        sendResponse({ success: true });
+      })();
       return true;
-    case 'blockCount':
+    case MSG.GET_STATS:
+      pollMatchedRules().then(() => getStats()).then(sendResponse);
+      return true;
+    case MSG.BLOCK_COUNT:
       incrementStats(message.count || 1).then(() => sendResponse({}));
       return true;
-    case 'malwareDetected':
+    case MSG.INCREMENT_BLOCKED:
+      incrementStats(message.count || 1).then(() => sendResponse({}));
+      return true;
+    case MSG.MALWARE_DETECTED:
       if (sender.tab) updateBadge(sender.tab.id, 'danger');
       sendResponse({ success: true });
       return true;
-    case 'getContainerInfo':
+    case MSG.GET_CONTAINER_INFO:
       getOrCreateContainer().then(c => sendResponse({
         enabled: true, containerName: CONTAINER_NAME, containerExists: !!c,
         isolatedDomains: ISOLATED_DOMAINS, cookieStoreId: c ? c.cookieStoreId : null
       }));
       return true;
-    case 'checkContainerTab':
+    case MSG.CHECK_CONTAINER_TAB:
       (async () => {
         const tab = sender.tab;
         if (!tab) { sendResponse({ inContainer: false }); return; }
@@ -1048,17 +1222,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         sendResponse({ inContainer: c ? tab.cookieStoreId === c.cookieStoreId : false, containerName: CONTAINER_NAME });
       })();
       return true;
-    case 'getWhitelist':
+    case MSG.GET_WHITELIST:
       getWhitelist().then(sendResponse);
       return true;
-    case 'addWhitelist':
+    case MSG.ADD_WHITELIST:
       getWhitelist().then(async (list) => {
         const host = hostFromUrl(message.url);
         if (host && !list.includes(host)) { list.push(host); await saveWhitelist(list); }
         sendResponse({ success: true, whitelist: list });
       });
       return true;
-    case 'removeWhitelist':
+    case MSG.REMOVE_WHITELIST:
       getWhitelist().then(async (list) => {
         const host = hostFromUrl(message.url);
         const idx = list.indexOf(host);
@@ -1066,16 +1240,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         sendResponse({ success: true, whitelist: list });
       });
       return true;
-    case 'isWhitelisted':
+    case MSG.IS_WHITELISTED:
       getWhitelist().then((list) => {
         const host = hostFromUrl(message.url);
         sendResponse({ whitelisted: list.includes(host) });
       });
       return true;
-    case 'getHideRules':
+    case MSG.GET_HIDE_RULES:
       getHideRules().then(sendResponse);
       return true;
-    case 'addHideRule':
+    case MSG.ADD_HIDE_RULE:
       getHideRules().then(async (rules) => {
         const host = hostFromUrl(message.url);
         if (!host) { sendResponse({ success: false }); return; }
@@ -1085,7 +1259,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         sendResponse({ success: true });
       });
       return true;
-    case 'removeHideRule':
+    case MSG.REMOVE_HIDE_RULE:
       getHideRules().then(async (rules) => {
         const host = hostFromUrl(message.url);
         if (rules[host]) {
@@ -1096,10 +1270,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         sendResponse({ success: true });
       });
       return true;
-    case 'getSiteStats':
+    case MSG.GET_SITE_STATS:
       getSiteStats().then(sendResponse);
       return true;
-    case 'recordSiteBlock':
+    case MSG.RECORD_SITE_BLOCK:
       (async () => {
         const tab = sender.tab;
         if (!tab) { sendResponse({}); return; }
@@ -1112,7 +1286,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         sendResponse({});
       })();
       return true;
-    case 'getTabInfo':
+    case MSG.GET_TAB_INFO:
       (async () => {
         if (!sender.tab) { sendResponse({ host: '', whitelisted: false }); return; }
         const host = hostFromUrl(sender.tab.url);
@@ -1120,41 +1294,55 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         sendResponse({ host, whitelisted: wl.includes(host) });
       })();
       return true;
-    case 'enterZapper':
+    case MSG.ENTER_ZAPPER:
       if (!sender.tab) { sendResponse({}); return true; }
       (async () => {
         try {
-          await chrome.tabs.sendMessage(sender.tab.id, { type: 'activateZapper' });
+          await _b.tabs.sendMessage(sender.tab.id, { type: MSG.ACTIVATE_ZAPPER });
         } catch (e) {}
         sendResponse({});
       })();
       return true;
-    case 'getFilterListStatus':
-      getFilterListStatus().then(sendResponse);
-      return true;
-    case 'getFilterListConfig':
-      getFilterListStatus().then(lists => sendResponse({ lists }));
-      return true;
-    case 'setFilterListEnabled':
+    case MSG.GET_FILTER_LIST_STATUS:
+      sendResponse([]);
+      return false;
+    case MSG.GET_FILTER_LIST_CONFIG:
+      sendResponse({ lists: [] });
+      return false;
+    case MSG.SET_FILTER_LIST_ENABLED:
       (async () => {
         const settings = await getFilterListSettings();
         settings[message.id] = message.enabled;
         await saveFilterListSettings(settings);
         await loadFilterListEnabledStates();
-        await updateFilterLists();
+        const result = await updateFilterLists();
+        if (result && result.compiled) setCompiledIndex(result.compiled, result.overflowPatterns);
         sendResponse({ success: true });
       })();
       return true;
-    case 'updateFilterLists':
-      updateFilterLists().then(sendResponse);
+    case MSG.UPDATE_FILTER_LISTS:
+      (async () => {
+        try {
+          const result = await updateFilterLists();
+          if (result && result.compiled) setCompiledIndex(result.compiled, result.overflowPatterns);
+          sendResponse({ success: true });
+        } catch (err) {
+          sendResponse({ success: false, error: err.message });
+        }
+      })();
       return true;
-    case 'getDynamicRuleCount':
+    case MSG.GET_DYNAMIC_RULE_COUNT:
       getDynamicRuleCount().then(sendResponse);
       return true;
-    case 'getJsSettings':
+    case 'reconcilePolicy':
+      (async () => {
+        try { await reconcileDynamicRules(); sendResponse({ success: true }); } catch (err) { sendResponse({ success: false, error: err.message }); }
+      })();
+      return true;
+    case MSG.GET_JS_SETTINGS:
       getJsSettings().then(sendResponse);
       return true;
-    case 'setJsSetting':
+    case MSG.SET_JS_SETTING:
       (async () => {
         const s = await getJsSettings();
         if (message.scope === 'global') {
@@ -1168,10 +1356,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         sendResponse({ success: true, settings: s });
       })();
       return true;
-    case 'getCustomRules':
+    case MSG.GET_CUSTOM_RULES:
       getCustomRules().then(sendResponse);
       return true;
-    case 'addCustomRule':
+    case MSG.ADD_CUSTOM_RULE:
       (async () => {
         let rules = await getCustomRules();
         const maxId = rules.reduce((m, r) => Math.max(m, r.id || 0), 0);
@@ -1181,7 +1369,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         sendResponse({ success: true, rules });
       })();
       return true;
-    case 'removeCustomRule':
+    case MSG.REMOVE_CUSTOM_RULE:
       (async () => {
         let rules = await getCustomRules();
         rules = rules.filter(r => r.id !== message.ruleId);
@@ -1190,10 +1378,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         sendResponse({ success: true, rules });
       })();
       return true;
-    case 'getDisabledRules':
+    case MSG.GET_DISABLED_RULES:
       getDisabledRuleIds().then(sendResponse);
       return true;
-    case 'toggleDisabledRule':
+    case MSG.TOGGLE_DISABLED_RULE:
       (async () => {
         let ids = await getDisabledRuleIds();
         if (ids.includes(message.ruleId)) ids = ids.filter(i => i !== message.ruleId);
@@ -1203,25 +1391,49 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         sendResponse({ success: true, disabledIds: ids });
       })();
       return true;
-    case 'getDisabledRuleIds':
+    case MSG.GET_DISABLED_RULE_IDS:
       getDisabledRuleIds().then(sendResponse);
       return true;
-    case 'reportThirdParties':
+    case MSG.REPORT_THIRD_PARTIES:
       if (sender.tab) {
         const host = hostFromUrl(sender.tab.url);
         reportThirdParties(message.domains || [], host).then(() => sendResponse({}));
       } else sendResponse({});
       return true;
-    case 'getDetectedTrackers':
+    case MSG.GET_DETECTED_TRACKERS:
       getDetectedTrackers().then(sendResponse);
       return true;
-    case 'getTrackerCategories':
+    case MSG.GET_TRACKERS_FOR_HOST:
+      (async () => {
+        const map = await getTrackerMap();
+        const actions = await getTrackerActions();
+        const tracked = await getAutoTracked();
+        const host = message.host;
+        const siteMap = new Map();
+        for (const [domain, info] of Object.entries(map)) {
+          if (info.sites) {
+            for (const site of info.sites) {
+              if (!siteMap.has(site)) siteMap.set(site, []);
+              siteMap.get(site).push(domain);
+            }
+          }
+        }
+        const domains = siteMap.get(host) || [];
+        sendResponse(domains.map(domain => ({
+          domain,
+          category: map[domain].category || 'Other',
+          sites: map[domain].sites ? map[domain].sites.length : 0,
+          action: actions[domain] || (tracked.includes(domain) ? 'block' : 'none')
+        })));
+      })();
+      return true;
+    case MSG.GET_TRACKER_CATEGORIES:
       getTrackerCategories().then(sendResponse);
       return true;
-    case 'whitelistTracker':
+    case MSG.WHITELIST_TRACKER:
       whitelistTracker(message.domain).then(() => sendResponse({ success: true }));
       return true;
-    case 'resetTrackerData':
+    case MSG.RESET_TRACKER_DATA:
       (async () => {
         await saveTrackerMap({});
         await saveAutoTracked([]);
@@ -1230,131 +1442,128 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         sendResponse({ success: true });
       })();
       return true;
-    case 'getTrackerActions':
+    case MSG.GET_TRACKER_ACTIONS:
       getTrackerActions().then(sendResponse);
       return true;
-    case 'setTrackerAction':
+    case MSG.SET_TRACKER_ACTION:
       setTrackerAction(message.domain, message.action).then(() => sendResponse({ success: true }));
       return true;
-    case 'getStealthConfig':
+    case MSG.GET_STEALTH_CONFIG:
       getStealthConfig().then(sendResponse);
       return true;
-    case 'saveStealthConfig':
+    case MSG.SAVE_STEALTH_CONFIG:
       saveStealthConfig(message.config).then(() => sendResponse({ success: true }));
       return true;
-    case 'getFilterLog':
-      getFilterLog().then(sendResponse);
+    case MSG.GET_FILTER_LOG:
+      getLogsIDB(2000, 0).then(sendResponse);
       return true;
-    case 'clearFilterLog':
+    case MSG.CLEAR_FILTER_LOG:
       clearFilterLog().then(() => sendResponse({ success: true }));
       return true;
-    case 'xssDetected':
+    case MSG.GET_LOG_COUNT:
+      getLogCountIDB().then(sendResponse);
+      return true;
+    case MSG.GET_FILTER_LOG_RANGE:
+      getLogsIDB(message.limit || 50, message.offset || 0).then(function(logs) {
+        sendResponse(logs);
+      });
+      return true;
+    case MSG.XSS_DETECTED:
       incrementStats(1);
       addFilterLogEntry({ ruleId: 'XSS', url: message.data || 'XSS blocked' });
       sendResponse({});
       return true;
-    case 'abeBlocked':
+    case MSG.ABE_BLOCKED:
       incrementStats(1);
       addFilterLogEntry({ ruleId: 'ABE', url: message.data || 'Local network blocked' });
       sendResponse({});
       return true;
-    case 'securePaymentBlocked':
+    case MSG.SECURE_PAYMENT_BLOCKED:
       incrementStats(1);
       addFilterLogEntry({ ruleId: 'PAY', url: message.data || 'HTTP payment blocked' });
       sendResponse({});
       return true;
-    case 'getDailyStats':
+    case MSG.GET_DAILY_STATS:
       getDailyStats().then(sendResponse);
       return true;
-case 'getYouTubeWhitelist':
+case MSG.GET_YOUTUBE_WHITELIST:
       getYouTubeWhitelist().then(sendResponse);
       return true;
-    case 'addYouTubeWhitelist':
+    case MSG.ADD_YOUTUBE_WHITELIST:
       addYouTubeWhitelist(message.channelId, message.channelName).then(sendResponse);
       return true;
-    case 'removeYouTubeWhitelist':
+    case MSG.REMOVE_YOUTUBE_WHITELIST:
       removeYouTubeWhitelist(message.channelId).then(sendResponse);
       return true;
-    case 'getTopDomains':
-      (async () => {
-        const log = await getFilterLog();
-        const counts = {};
-        for (const entry of log) {
-          try {
-            const url = entry.url || '';
-            const host = new URL(url).hostname || url;
-            counts[host] = (counts[host] || 0) + 1;
-          } catch (e) { counts[entry.url] = (counts[entry.url] || 0) + 1; }
-        }
-        sendResponse(Object.entries(counts).sort((a,b) => b[1] - a[1]).slice(0, 10));
-      })();
+    case MSG.GET_TOP_DOMAINS:
+      getTopDomainsIDB(10).then(sendResponse);
       return true;
-    case 'handleBrowserCleanup':
+    case MSG.HANDLE_BROWSER_CLEANUP:
       handleBrowserCleanup(message).then(sendResponse);
       return true;
-    case 'getSitePermissions':
+    case MSG.GET_SITE_PERMISSIONS:
       getSitePermissions().then(sendResponse);
       return true;
-    case 'getContainerStatus':
+    case MSG.GET_CONTAINER_STATUS:
       (async () => {
         const c = await getOrCreateContainer();
         sendResponse({ exists: !!c, name: CONTAINER_NAME, domains: ISOLATED_DOMAINS, cookieStoreId: c ? c.cookieStoreId : null });
       })();
       return true;
-    case 'updateCDNMap':
+    case MSG.UPDATE_CDN_MAP:
       updateCDNMap().then(sendResponse);
       return true;
-    case 'getCDNMap':
+    case MSG.GET_CDN_MAP:
       (async () => {
-        let r = await chrome.storage.local.get('durgashield_cdn_map');
+        let r = await _b.storage.local.get('durgashield_cdn_map');
         if (!r.durgashield_cdn_map || !r.durgashield_cdn_map.entries || r.durgashield_cdn_map.entries.length === 0) {
           await loadCDNMap();
-          r = await chrome.storage.local.get('durgashield_cdn_map');
+          r = await _b.storage.local.get('durgashield_cdn_map');
         }
         sendResponse(r.durgashield_cdn_map || null);
       })();
       return true;
-    case 'updateCDNFiles':
+    case MSG.UPDATE_CDN_FILES:
       updateCDNFiles().then(sendResponse);
       return true;
-    case 'getCDNFilesStatus':
+    case MSG.GET_CDN_FILES_STATUS:
       (async () => {
-        const r = await chrome.storage.local.get('durgashield_cdn_updated_files');
-        const t = await chrome.storage.local.get('durgashield_cdn_files_updated');
+        const r = await _b.storage.local.get('durgashield_cdn_updated_files');
+        const t = await _b.storage.local.get('durgashield_cdn_files_updated');
         const files = r.durgashield_cdn_updated_files || {};
         sendResponse({ count: Object.keys(files).length, updated: t.durgashield_cdn_files_updated || null, files: files });
       })();
       return true;
-    case 'checkPasswordLeak':
-      checkPasswordLeak(message.password).then(sendResponse);
+    case MSG.CHECK_PASSWORD_LEAK:
+      checkPasswordLeak(message.hash).then(sendResponse);
       return true;
-    case 'getPasswordLeaks':
+    case MSG.GET_PASSWORD_LEAKS:
       getPasswordLeaks().then(sendResponse);
       return true;
-    case 'clearPasswordLeaks':
+    case MSG.CLEAR_PASSWORD_LEAKS:
       clearPasswordLeaks().then(() => sendResponse({ success: true }));
       return true;
-    case 'autoCheckPassword':
+    case MSG.AUTO_CHECK_PASSWORD:
       (async () => {
         const config = await getConfig();
         if (config.passwordLeakCheck === false) { sendResponse({ skipped: true }); return; }
-        const result = await checkPasswordLeak(message.password);
+        const result = await checkPasswordLeak(message.hash);
         if (result.compromised) {
           batchNotification('Password Leak Detected', 'A password you entered has been found in ' + result.count + ' known data breaches. Change it immediately.');
         }
         sendResponse({ checked: true, compromised: result.compromised });
       })();
       return true;
-    case 'exportFilterLog':
+    case MSG.EXPORT_FILTER_LOG:
       exportFilterLog().then(sendResponse);
       return true;
-    case 'scanExtensions':
+    case MSG.SCAN_EXTENSIONS:
       scanExtensions().then(sendResponse);
       return true;
-    case 'getExtensionAudit':
+    case MSG.GET_EXTENSION_AUDIT:
       getExtensionAudit().then(sendResponse);
       return true;
-    case 'getPrivacyScore':
+    case MSG.GET_PRIVACY_SCORE:
       (async () => {
         const trackers = await getDetectedTrackers();
         const https = message.url ? message.url.startsWith('https://') : true;
@@ -1370,17 +1579,51 @@ case 'getYouTubeWhitelist':
         sendResponse({ score, grade, trackerCount, https });
       })();
       return true;
-    case 'getSiteBlocker':
+    case MSG.GET_SITE_BLOCKER:
       getSiteBlockerList().then(sendResponse);
       return true;
-    case 'saveSiteBlocker':
+    case MSG.SAVE_SITE_BLOCKER:
       saveSiteBlockerList(message.domains).then(sendResponse);
       return true;
-    case 'getAcceptableAds':
+    case MSG.GET_ACCEPTABLE_ADS:
       getAcceptableAds().then(sendResponse);
       return true;
-    case 'saveAcceptableAds':
+    case MSG.SAVE_ACCEPTABLE_ADS:
       saveAcceptableAds(message.domains).then(sendResponse);
+      return true;
+    case MSG.GET_SITE_PREFS:
+      _b.storage.local.get(SITE_PREFS_KEY, (r) => sendResponse(r[SITE_PREFS_KEY] || {}));
+      return true;
+    case MSG.SET_SITE_PREFS:
+      (async () => {
+        const r = await _b.storage.local.get(SITE_PREFS_KEY);
+        const prefs = r[SITE_PREFS_KEY] || {};
+        prefs[message.host] = prefs[message.host] || {};
+        prefs[message.host][message.feature] = message.enabled;
+        await _b.storage.local.set({ [SITE_PREFS_KEY]: prefs });
+        const tabs = await _b.tabs.query({});
+        for (const tab of tabs) {
+          try { _b.tabs.sendMessage(tab.id, { type: MSG.SITE_PREFS, prefs }); } catch (e) {}
+        }
+        sendResponse({ success: true });
+      })();
+      return true;
+    case MSG.GET_PERF_MODE:
+      getConfig().then(c => sendResponse({ perfMode: c.perfMode || 'balanced' }));
+      return true;
+    case MSG.SET_PERF_MODE:
+      getConfig().then(async (c) => {
+        c.perfMode = message.perfMode || 'balanced';
+        await saveConfig(c);
+        await reconcileDynamicRules();
+        sendResponse({ success: true });
+      });
+      return true;
+    case 'shouldBlock':
+      Promise.resolve(shouldBlock(message.url)).then(sendResponse);
+      return true;
+    case 'shouldBlockBatch':
+      Promise.resolve(shouldBlockUrls(message.urls || [])).then(sendResponse);
       return true;
   }
 });
@@ -1388,24 +1631,27 @@ case 'getYouTubeWhitelist':
 function updateBadge(tabId, type) {
   const colors = { danger: '#dc3545', warning: '#ffc107', safe: '#28a745' };
   const icons = { danger: '\u26A0', safe: '\u2713' };
-  chrome.action.setBadgeText({ tabId, text: icons[type] || '' });
-  chrome.action.setBadgeBackgroundColor({ tabId, color: colors[type] || colors.safe });
+  _b.action.setBadgeText({ tabId, text: icons[type] || '' });
+  _b.action.setBadgeBackgroundColor({ tabId, color: colors[type] || colors.safe });
 }
 
-chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+_b.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   if (changeInfo.status === 'loading' && tab.url) {
     try {
       const url = new URL(tab.url);
-      if (url.protocol === 'http:' || url.protocol === 'https:') chrome.action.setBadgeText({ tabId, text: '' });
+      if (url.protocol === 'http:' || url.protocol === 'https:') _b.action.setBadgeText({ tabId, text: '' });
       // Inject custom hide rules CSS before page renders
       try {
         const host = url.hostname.replace(/^www\./, '');
-        const r = await chrome.storage.local.get('durgashield_hide_rules');
+        const r = await _b.storage.local.get('durgashield_hide_rules');
         const rules = r.durgashield_hide_rules || {};
         const selectors = rules[host];
         if (selectors && selectors.length > 0) {
-          const css = selectors.map(s => s + '{display:none!important}').join('\n');
-          chrome.scripting.insertCSS({ target: { tabId }, css: css, origin: 'USER' });
+          const safe = selectors.filter(function(s) { return s !== 'body' && s !== 'html' && !s.startsWith('body ') && !s.startsWith('html '); });
+          if (safe.length > 0) {
+            const css = safe.map(s => s + '{display:none!important}').join('\n');
+            _b.scripting.insertCSS({ target: { tabId }, css: css, origin: 'USER' });
+          }
         }
       } catch (e) {}
     } catch (e) {}
@@ -1445,12 +1691,12 @@ async function checkDownload(item) {
     const isMalwareDomain = MALWARE_DOMAINS.some(d => url.hostname.includes(d));
     if (!isMalwareDomain && !isDangerousExt) return;
     if (pendingDownloadConfirmations[item.id]) return;
-    const allowed = await chrome.storage.local.get('durgashield_download_allowed');
+    const allowed = await _b.storage.local.get('durgashield_download_allowed');
     if (allowed.durgashield_download_allowed && allowed.durgashield_download_allowed.includes(item.url)) return;
     const reason = isMalwareDomain ? 'suspicious domain' : 'dangerous file type (' + ext + ')';
     const nid = 'dl-confirm-' + item.id;
     pendingDownloadConfirmations[item.id] = { item, reason, nid };
-    await chrome.notifications.create(nid, {
+    await _b.notifications.create(nid, {
       type: 'basic',
       iconUrl: 'icons/icon-128.svg',
       title: 'DurgaShield: Suspicious download',
@@ -1462,103 +1708,70 @@ async function checkDownload(item) {
       if (pendingDownloadConfirmations[item.id]) {
         delete pendingDownloadConfirmations[item.id];
         try {
-          await chrome.downloads.cancel(item.id);
-          await chrome.downloads.erase({ id: item.id });
+          await _b.downloads.cancel(item.id);
+          await _b.downloads.erase({ id: item.id });
         } catch (e) {}
-        try { chrome.notifications.clear(nid); } catch (e) {}
+        try { _b.notifications.clear(nid); } catch (e) {}
       }
     }, 60000);
   } catch (e) {}
 }
 
 // Handle download notification button clicks
-chrome.notifications.onButtonClicked.addListener((nid, btnIdx) => {
+_b.notifications.onButtonClicked.addListener((nid, btnIdx) => {
   if (!nid.startsWith('dl-confirm-')) return;
   const id = parseInt(nid.replace('dl-confirm-', ''));
   const entry = pendingDownloadConfirmations[id];
   if (!entry) return;
   delete pendingDownloadConfirmations[id];
-  chrome.notifications.clear(nid);
+  _b.notifications.clear(nid);
   if (btnIdx === 0) {
     // Proceed anyway — whitelist this URL
-    chrome.storage.local.get('durgashield_download_allowed', (r) => {
+    _b.storage.local.get('durgashield_download_allowed', (r) => {
       let list = r.durgashield_download_allowed || [];
       if (!list.includes(entry.item.url)) list.push(entry.item.url);
-      chrome.storage.local.set({ durgashield_download_allowed: list });
+      _b.storage.local.set({ durgashield_download_allowed: list });
     });
     if (entry.item.paused) {
-      try { chrome.downloads.resume(id); } catch (e) {}
+      try { _b.downloads.resume(id); } catch (e) {}
     }
   } else {
     // Cancel download
     try {
-      chrome.downloads.cancel(id);
-      chrome.downloads.erase({ id: id });
+      _b.downloads.cancel(id);
+      _b.downloads.erase({ id: id });
     } catch (e) {}
   }
 });
 
-async function initDownloadScanner() {
-  if (!await ensurePermissions('downloadScan')) return;
-  chrome.downloads.onCreated.addListener((item) => {
+let _downloadScannerInitialized = false;
+
+async function registerDownloadListeners() {
+  if (_downloadScannerInitialized) return;
+  _downloadScannerInitialized = true;
+  _b.downloads.onCreated.addListener((item) => {
     checkDownload(item);
   });
-  chrome.downloads.onChanged.addListener((delta) => {
+  _b.downloads.onChanged.addListener((delta) => {
     if (delta.state && delta.state.current === 'complete') {
-      chrome.downloads.search({ id: delta.id }, (items) => {
+      _b.downloads.search({ id: delta.id }, (items) => {
         if (items && items[0]) checkDownload(items[0]);
       });
     }
   });
 }
+
+async function initDownloadScanner() {
+  if (_downloadScannerInitialized) return;
+  const perms = OPTIONAL_FEATURE_PERMS.downloadScan;
+  if (!perms) return;
+  const already = await _b.permissions.contains({ permissions: perms });
+  if (!already) return;
+  await registerDownloadListeners();
+}
 initDownloadScanner();
 
 /* ---------- URL Tracking Cleaner (DNR removeParams) ---------- */
-const TRACKING_PARAMS = [
-  'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content',
-  'fbclid', 'gclid', 'msclkid', 'dclid', 'gclsrc',
-  'mc_cid', 'mc_eid',
-  'oly_anon_id', 'oly_enc_id', '_openstat',
-  'vero_id', 'vero_conv', 'vero_series',
-  'wickedid', 'yclid', '_hsenc', '_hsmi',
-  'hsCtaTracking', '__hstc', '__hsfp', '__hssc',
-  'trk_contact', 'trk_msg', 'trk_module', 'trk_sid',
-  'mtm_source', 'mtm_medium', 'mtm_campaign', 'mtm_keyword', 'mtm_content',
-  'pk_source', 'pk_medium', 'pk_campaign', 'pk_keyword', 'pk_content',
-  'awc', 'tb_source', 'ref', 'spm',
-  'sc_channel', 'sc_place', 'sc_campaign', 'sc_content', 'sc_medium',
-  'si', 's_kwcid', 'ef_id', 'soc_src', 'soc_trk'
-];
-const TRACKING_CLEANER_RULE_START = 996000;
-function buildTrackingCleanerRules() {
-  const chunkSize = 30;
-  const rules = [];
-  for (let i = 0; i < TRACKING_PARAMS.length; i += chunkSize) {
-    const chunk = TRACKING_PARAMS.slice(i, i + chunkSize);
-    rules.push({
-      id: TRACKING_CLEANER_RULE_START + (i / chunkSize),
-      priority: 2,
-      action: {
-        type: 'redirect',
-        redirect: { transform: { queryTransform: { removeParams: chunk } } }
-      },
-      condition: {
-        urlFilter: '|https://',
-        resourceTypes: ['main_frame', 'sub_frame', 'xmlhttprequest']
-      }
-    });
-  }
-  return rules;
-}
-async function installTrackingCleaner() {
-  try {
-    const existing = await chrome.declarativeNetRequest.getSessionRules();
-    const oldIds = existing.filter(r => r.id >= TRACKING_CLEANER_RULE_START && r.id < TRACKING_CLEANER_RULE_START + 100).map(r => r.id);
-    const rules = buildTrackingCleanerRules();
-    await chrome.declarativeNetRequest.updateSessionRules({ removeRuleIds: oldIds, addRules: rules });
-  } catch (e) { console.warn('DurgaShield: tracking cleaner install error:', e); }
-}
-
 /* ---------- Site Compatibility Allow Rules ---------- */
 const GITHUB_ALLOW_START = 997000;
 const ALLOWED_SITES = [
@@ -1596,10 +1809,10 @@ function buildSiteAllowRules() {
 }
 async function installSiteAllowRules() {
   try {
-    const existing = await chrome.declarativeNetRequest.getSessionRules();
+    const existing = await _b.declarativeNetRequest.getDynamicRules();
     const oldIds = existing.filter(r => r.id >= GITHUB_ALLOW_START && r.id < GITHUB_ALLOW_START + 50).map(r => r.id);
     const rules = buildSiteAllowRules();
-    await chrome.declarativeNetRequest.updateSessionRules({ removeRuleIds: oldIds, addRules: rules });
+    await _b.declarativeNetRequest.updateDynamicRules({ removeRuleIds: oldIds, addRules: rules });
   } catch (e) { console.warn('DurgaShield: allow rules install error:', e); }
 }
 
@@ -1609,16 +1822,16 @@ const CDN_RULE_ID_START = 990000;
 
 async function loadCDNMap() {
   try {
-    const bundled = await fetch(chrome.runtime.getURL('resources/cdn-map.json'));
+    const bundled = await fetch(_b.runtime.getURL('resources/cdn-map.json'));
     const bundledMap = await bundled.json();
     let map = { entries: bundledMap, version: '1.0', source: 'bundled', lastUpdate: Date.now() };
-    const existing = await chrome.storage.local.get('durgashield_cdn_map');
+    const existing = await _b.storage.local.get('durgashield_cdn_map');
     if (existing.durgashield_cdn_map && existing.durgashield_cdn_map.lastUpdate) {
       map.lastUpdate = existing.durgashield_cdn_map.lastUpdate;
       map.version = existing.durgashield_cdn_map.version || '1.0';
       if (existing.durgashield_cdn_map.entries) map.entries = existing.durgashield_cdn_map.entries;
     }
-    await chrome.storage.local.set({ durgashield_cdn_map: map });
+    await _b.storage.local.set({ durgashield_cdn_map: map });
     return map;
   } catch (e) {
     console.warn('DurgaShield: loadCDNMap error:', e);
@@ -1682,7 +1895,7 @@ function buildCDNRules() {
 }
 
 async function initCDNFileCache() {
-  try { await chrome.storage.local.get('durgashield_cdn_updated_files'); } catch (e) {}
+  try { await _b.storage.local.get('durgashield_cdn_updated_files'); } catch (e) {}
 }
 
 async function updateCDNFiles() {
@@ -1691,24 +1904,24 @@ async function updateCDNFiles() {
     results.files.push({ lib: bundled.lib, version: bundled.version, size: 0 });
     results.success++;
   }
-  await chrome.storage.local.set({ durgashield_cdn_files_updated: Date.now() });
+  await _b.storage.local.set({ durgashield_cdn_files_updated: Date.now() });
   return results;
 }
 
 async function installCDNReplacement() {
   try {
-    const existing = await chrome.declarativeNetRequest.getSessionRules();
+    const existing = await _b.declarativeNetRequest.getDynamicRules();
     const oldCDNRules = existing.filter(r => r.id >= CDN_RULE_ID_START && r.id < CDN_RULE_ID_START + 5000);
     if (oldCDNRules.length > 0) {
-      await chrome.declarativeNetRequest.updateSessionRules({
+      await _b.declarativeNetRequest.updateDynamicRules({
         removeRuleIds: oldCDNRules.map(r => r.id)
       });
     }
     const rules = buildCDNRules();
     if (rules.length > 0) {
-      await chrome.declarativeNetRequest.updateSessionRules({ addRules: rules });
+      await _b.declarativeNetRequest.updateDynamicRules({ addRules: rules });
     }
-    await chrome.storage.local.set({ durgashield_cdn_rules_count: rules.length });
+    await _b.storage.local.set({ durgashield_cdn_rules_count: rules.length });
   } catch (e) {
     console.warn('DurgaShield: installCDNReplacement error:', e);
   }
@@ -1716,14 +1929,14 @@ async function installCDNReplacement() {
 
 async function removeCDNReplacement() {
   try {
-    const existing = await chrome.declarativeNetRequest.getSessionRules();
+    const existing = await _b.declarativeNetRequest.getDynamicRules();
     const cdnRules = existing.filter(r => r.id >= CDN_RULE_ID_START && r.id < CDN_RULE_ID_START + 5000);
     if (cdnRules.length > 0) {
-      await chrome.declarativeNetRequest.updateSessionRules({
+      await _b.declarativeNetRequest.updateDynamicRules({
         removeRuleIds: cdnRules.map(r => r.id)
       });
     }
-    await chrome.storage.local.set({ durgashield_cdn_rules_count: 0 });
+    await _b.storage.local.set({ durgashield_cdn_rules_count: 0 });
   } catch (e) {
     console.warn('DurgaShield: removeCDNReplacement error:', e);
   }
@@ -1731,11 +1944,11 @@ async function removeCDNReplacement() {
 
 async function updateCDNMap() {
   try {
-    const bundled = await fetch(chrome.runtime.getURL('resources/cdn-map.json'));
+    const bundled = await fetch(_b.runtime.getURL('resources/cdn-map.json'));
     const bundledMap = await bundled.json();
     if (!Array.isArray(bundledMap)) throw new Error('Invalid map format');
     const map = { entries: bundledMap, version: '1.0', source: 'bundled', lastUpdate: Date.now() };
-    await chrome.storage.local.set({ durgashield_cdn_map: map });
+    await _b.storage.local.set({ durgashield_cdn_map: map });
     const config = await getConfig();
     if (config.cdnReplacement) await installCDNReplacement();
     return { success: true, entries: bundledMap.length, lastUpdate: map.lastUpdate };
@@ -1745,13 +1958,41 @@ async function updateCDNMap() {
   }
 }
 
-/* ---------- Filter Auto-Update Alarm ---------- */
+/* ---------- DNR Rule Usage Feedback ---------- */
+// Track rule hits for smart pruning (only if permission available)
 try {
-  chrome.alarms.create('filterUpdate', { periodInMinutes: 360 });
-  chrome.alarms.onAlarm.addListener((alarm) => {
-    if (alarm.name === 'filterUpdate') updateFilterLists();
+  if (_b.declarativeNetRequest.onRuleMatchedDebug) {
+    _b.declarativeNetRequest.onRuleMatchedDebug.addListener((info) => {
+      if (info.rule && info.rule.ruleId >= FILTER_RULE_START && info.rule.ruleId < FILTER_RULE_START + 100000) {
+        recordRuleHit(info.rule.ruleId);
+      }
+    });
+  }
+} catch (e) {}
+
+/* ---------- Scheduled Background Tasks (Alarms API) ----------
+   Using alarms instead of setInterval to survive SW lifecycle and avoid quota issues.
+*/
+try {
+  _b.alarms.create('filterUpdate', { periodInMinutes: 360 });
+  _b.alarms.create('cookieSelfDestruct', { periodInMinutes: 30 });
+  _b.alarms.create('pollMatchedRules', { periodInMinutes: 1 });
+  _b.alarms.onAlarm.addListener((alarm) => {
+    if (alarm.name === 'filterUpdate') {
+      updateFilterLists().then(result => {
+        if (result && result.compiled) setCompiledIndex(result.compiled, result.overflowPatterns);
+      });
+      // Also run rule pruning periodically
+      pruneUnusedRules().catch(() => {});
+    }
+    if (alarm.name === 'cookieSelfDestruct') {
+      cookieSelfDestruct();
+    }
+    if (alarm.name === 'pollMatchedRules') {
+      pollMatchedRules();
+    }
     if (alarm.name === 'cdnFileUpdate') {
-      chrome.storage.local.get('durgashield_config').then(r => {
+      _b.storage.local.get('durgashield_config').then(r => {
         if (r.durgashield_config && r.durgashield_config.cdnReplacement !== false) updateCDNFiles();
       });
     }
@@ -1762,7 +2003,7 @@ try {
 
 // 24-hour CDN file auto-update
 try {
-  chrome.alarms.create('cdnFileUpdate', { periodInMinutes: 1440 });
+  _b.alarms.create('cdnFileUpdate', { periodInMinutes: 1440 });
 } catch (e) {
   console.warn('DurgaShield: cdn alarm error:', e);
 }
@@ -1771,13 +2012,13 @@ try {
 const EXTENSION_RISK_KEY = 'durgashield_extension_audit';
 async function scanExtensions() {
   try {
-    if (!chrome.management || !chrome.management.getAll) return { error: 'management API not available' };
-    const all = await chrome.management.getAll();
+    if (!_b.management || !_b.management.getAll) return { error: 'management API not available' };
+    const all = await _b.management.getAll();
     const results = [];
     const highRiskPerms = ['nativeMessaging','debugger','proxy','privacy','history','sessions','tabs','bookmarks','downloads','clipboardRead','clipboardWrite','identity','identity.email'];
     const mediumRiskPerms = ['cookies','webRequest','webRequestBlocking','notifications','alarms','storage','unlimitedStorage','geolocation'];
     for (const ext of all) {
-      if (ext.id === chrome.runtime.id) continue;
+      if (ext.id === _b.runtime.id) continue;
       if (ext.type !== 'extension') continue;
       const perms = ext.permissions || [];
       const hostPerms = ext.hostPermissions || [];
@@ -1808,14 +2049,14 @@ async function scanExtensions() {
       const order = { critical: 0, high: 1, medium: 2, low: 3 };
       return (order[a.riskLevel] || 99) - (order[b.riskLevel] || 99);
     });
-    await chrome.storage.local.set({ [EXTENSION_RISK_KEY]: results });
+    await _b.storage.local.set({ [EXTENSION_RISK_KEY]: results });
     return results;
   } catch (e) {
     return { error: e.message };
   }
 }
 async function getExtensionAudit() {
-  const r = await chrome.storage.local.get(EXTENSION_RISK_KEY);
+  const r = await _b.storage.local.get(EXTENSION_RISK_KEY);
   return r[EXTENSION_RISK_KEY] || [];
 }
 
@@ -1823,19 +2064,19 @@ async function getExtensionAudit() {
 const SITE_BLOCKER_KEY = 'durgashield_site_blocker';
 const SITE_BLOCKER_RULE_START = 702000;
 async function getSiteBlockerList() {
-  const r = await chrome.storage.local.get(SITE_BLOCKER_KEY);
+  const r = await _b.storage.local.get(SITE_BLOCKER_KEY);
   return r[SITE_BLOCKER_KEY] || [];
 }
 async function saveSiteBlockerList(domains) {
-  await chrome.storage.local.set({ [SITE_BLOCKER_KEY]: domains });
+  await _b.storage.local.set({ [SITE_BLOCKER_KEY]: domains });
   await applySiteBlockerRules(domains);
 }
 async function applySiteBlockerRules(domains) {
   try {
-    const existing = await chrome.declarativeNetRequest.getDynamicRules();
+    const existing = await _b.declarativeNetRequest.getDynamicRules();
     const oldIds = existing.filter(r => r.id >= SITE_BLOCKER_RULE_START && r.id < SITE_BLOCKER_RULE_START + 100).map(r => r.id);
     if (domains.length === 0) {
-      await chrome.declarativeNetRequest.updateDynamicRules({ removeRuleIds: oldIds, addRules: [] });
+      await _b.declarativeNetRequest.updateDynamicRules({ removeRuleIds: oldIds, addRules: [] });
       return;
     }
     const rules = domains.map((d, i) => ({
@@ -1844,7 +2085,7 @@ async function applySiteBlockerRules(domains) {
       action: { type: 'block' },
       condition: { urlFilter: '||' + d + '^', resourceTypes: ['main_frame'] }
     }));
-    await chrome.declarativeNetRequest.updateDynamicRules({ removeRuleIds: oldIds, addRules: rules });
+    await _b.declarativeNetRequest.updateDynamicRules({ removeRuleIds: oldIds, addRules: rules });
   } catch (e) { console.warn('DurgaShield: site blocker error:', e); }
 }
 
@@ -1852,19 +2093,19 @@ async function applySiteBlockerRules(domains) {
 const ACCEPTABLE_ADS_KEY = 'durgashield_acceptable_ads';
 const ACCEPTABLE_ADS_RULE_START = 703000;
 async function getAcceptableAds() {
-  const r = await chrome.storage.local.get(ACCEPTABLE_ADS_KEY);
+  const r = await _b.storage.local.get(ACCEPTABLE_ADS_KEY);
   return r[ACCEPTABLE_ADS_KEY] || [];
 }
 async function saveAcceptableAds(domains) {
-  await chrome.storage.local.set({ [ACCEPTABLE_ADS_KEY]: domains });
+  await _b.storage.local.set({ [ACCEPTABLE_ADS_KEY]: domains });
   await applyAcceptableAdsRules(domains);
 }
 async function applyAcceptableAdsRules(domains) {
   try {
-    const existing = await chrome.declarativeNetRequest.getDynamicRules();
+    const existing = await _b.declarativeNetRequest.getDynamicRules();
     const oldIds = existing.filter(r => r.id >= ACCEPTABLE_ADS_RULE_START && r.id < ACCEPTABLE_ADS_RULE_START + 200).map(r => r.id);
     if (domains.length === 0) {
-      await chrome.declarativeNetRequest.updateDynamicRules({ removeRuleIds: oldIds, addRules: [] });
+      await _b.declarativeNetRequest.updateDynamicRules({ removeRuleIds: oldIds, addRules: [] });
       return;
     }
     const rules = domains.map((d, i) => ({
@@ -1873,6 +2114,6 @@ async function applyAcceptableAdsRules(domains) {
       action: { type: 'allow' },
       condition: { urlFilter: '||' + d + '^', resourceTypes: ['script', 'image', 'stylesheet', 'xmlhttprequest', 'other'] }
     }));
-    await chrome.declarativeNetRequest.updateDynamicRules({ removeRuleIds: oldIds, addRules: rules });
+    await _b.declarativeNetRequest.updateDynamicRules({ removeRuleIds: oldIds, addRules: rules });
   } catch (e) { console.warn('DurgaShield: acceptable ads error:', e); }
 }

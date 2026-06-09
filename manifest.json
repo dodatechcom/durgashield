@@ -3,6 +3,9 @@
   "name": "DurgaShield",
   "version": "1.0.0",
   "description": "All-in-one privacy & security: ad blocker, anti-track, malware/phishing protection, social media filter, annoyance blocker, stealth mode & more",
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self';"
+  },
   "permissions": [
     "declarativeNetRequest",
     "declarativeNetRequestFeedback",
@@ -61,7 +64,7 @@
     ]
   },
   "background": {
-    "scripts": ["background.js"]
+    "page": "background.html"
   },
   "content_scripts": [
     {

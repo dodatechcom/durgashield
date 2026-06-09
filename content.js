@@ -2,78 +2,130 @@
   if (window._durgashield_loaded) return;
   window._durgashield_loaded = true;
 
-  const config = { ads: true, malware: true, crypto: true, phishing: true, popupBlocking: true, containerIsolation: true, searchAnnotations: true, metadataCleanup: false, videoRedirect: true, stealth: true, enhancedTracking: true, xssProtection: true, clearClick: true, aiDlp: true, defacementDetect: true, phoneScamDetect: true, phishingLinkDetect: true, fbPrivacy: true };
-  let zapperActive = false;
-  let jsBlocked = false;
+  console.log('[DurgaShield] content script loaded on', location.hostname);
 
-  /* Amazon domains: bail from init() early to avoid CSP & API interference on payment flows */
-  const _isAmazonPayment = window.location.hostname.includes('amazon.') || window.location.hostname.includes('amazon.dev') || window.location.hostname.includes('siege-amazon.com');
+  const _b = typeof browser !== 'undefined' ? browser : chrome;
+
+  let siteDisabled = false;
+
+  const MSG = {
+    ADD_HIDE_RULE: 'addHideRule',
+    BLOCK_COUNT: 'blockCount',
+    RECORD_SITE_BLOCK: 'recordSiteBlock',
+    MALWARE_DETECTED: 'malwareDetected',
+    REPORT_THIRD_PARTIES: 'reportThirdParties',
+    XSS_DETECTED: 'xssDetected',
+    ABE_BLOCKED: 'abeBlocked',
+    INCREMENT_BLOCKED: 'incrementBlocked',
+    AUTO_CHECK_PASSWORD: 'autoCheckPassword',
+    CONFIG_UPDATED: 'configUpdated',
+    ACTIVATE_ZAPPER: 'activateZapper',
+    SET_JS_BLOCKED: 'setJsBlocked',
+    STEALTH_UPDATED: 'stealthUpdated',
+    COSMETIC_FILTERS: 'cosmeticFilters',
+    APPLY_COSMETICS: 'applyCosmetics',
+    SET_SITE_DISABLED: 'setSiteDisabled',
+    SET_ENABLED: 'setEnabled',
+    SITE_PREFS: 'sitePrefs',
+    REMOVE_HIDE_RULE: 'removeHideRule'
+  };
+
+  const _confirmModals = new Map();
+
+  function injectMainWorldCode(code) {
+    try {
+      const el = document.createElement('script');
+      el.textContent = code;
+      (document.documentElement || document.head || document.body).appendChild(el);
+      el.remove();
+    } catch (e) {}
+  }
+  injectMainWorldCode('window.__dgsBridged=true');
+  document.addEventListener('dgs-bridge', (e) => {
+    if (e.detail && e.detail.type === 'queueBlock') {
+      queueBlockCount(e.detail.count || 1);
+    }
+  });
 
   /* Pre-emptive CSS: hide known ad elements before first paint */
   try {
-    var hideStyle = document.createElement('style');
-    hideStyle.id = 'dgs-instant-hide';
-    hideStyle.textContent = 'ins.adsbygoogle,amp-ad,google-ad,.ad-panel,iframe[src*="doubleclick.net"],iframe[src*="googlesyndication.com"],.adsbygoogle[data-ad-status="unfilled"]{display:none!important}';
-    document.documentElement.appendChild(hideStyle);
+    var _dgsHideStyle = document.createElement('style');
+    _dgsHideStyle.id = 'dgs-instant-hide';
+    _dgsHideStyle.textContent = 'ins.adsbygoogle,amp-ad,google-ad,.ad-panel,div[id^="div-gpt-ad"],div[id^="google_ads_iframe"],div[id*="google_adsense"],div[id*="gpt-ad-"],div[id*="gpt_ad_"],div[id^="ad-"],div[class*="ad-container"],div[class*="ad-wrapper"],div[class*="adslot"],div[data-adunit],div[data-ad-],iframe[src*="doubleclick.net"],iframe[src*="googlesyndication.com"],iframe[src*="googleadservices.com"],iframe[src*="amazon-adsystem.com"],iframe[src*="adservice.google.com"],.adsbygoogle[data-ad-status="unfilled"],[data-element="barcode"],[data-element="campaign"],[data-izone*="uc-area"],[data-element="branding"],div[id*="taboola"],div[class*="taboola"],div[class*="trc_"],div[id*="taboola-"],div[class*="video-rec"],div[class*="rec-item"],div[class*="organic-rec"],div[class*="native-rec"],div[class*="suggestions"],div[data-type="rbox"],div[data-placement*="Taboola"],.trc_related_container,.trc_rbox_div,.videocube-unit{display:none!important}';
+    document.documentElement.appendChild(_dgsHideStyle);
+  } catch (_e) { debugError('Pre-emptive CSS injection failed', _e); }
+  /* Core ds-hidden style — injected synchronously so class-based hiding works immediately */
+  try {
+    var _dgsCore = document.createElement('style');
+    _dgsCore.id = 'dgs-core-early';
+    _dgsCore.textContent = '.ds-hidden,a[data-dgs-unsafe]{display:none!important}.ds-blocked{display:none!important}';
+    document.documentElement.appendChild(_dgsCore);
   } catch (_e) {}
 
-  /* ---------- uBlock-style Scriptlets (anti-adblock bypass) ---------- */
-  const scriptlets = {};
-
-  scriptlets['abort-on-property-read'] = function(propName) {
-    const nativeProp = propName;
-    try {
-      const parts = propName.split('.');
-      let obj = window;
-      for (let i = 0; i < parts.length - 1; i++) {
-        if (!obj[parts[i]]) return;
-        obj = obj[parts[i]];
+  function showConfirmModal(msg, title) {
+    return new Promise((resolve) => {
+      const existing = document.getElementById('dgs-modal-overlay');
+      if (existing) existing.remove();
+      const overlay = document.createElement('div');
+      overlay.id = 'dgs-modal-overlay';
+      overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:2147483647;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;font-family:Arial,sans-serif';
+      const box = document.createElement('div');
+      box.style.cssText = 'background:#fff;color:#1a1a2e;padding:28px 32px;border-radius:12px;box-shadow:0 8px 40px rgba(0,0,0,0.2);min-width:360px;max-width:480px;text-align:left';
+      if (title) {
+        const t = document.createElement('div');
+        t.style.cssText = 'font-size:17px;margin-bottom:12px;font-weight:600';
+        t.textContent = title;
+        box.appendChild(t);
       }
-      const last = parts[parts.length - 1];
-      Object.defineProperty(obj, last, {
-        get: function() { throw new Error('DurgaShield: aborted ' + nativeProp); },
-        set: function() {},
-        configurable: true
+      const msgEl = document.createElement('div');
+      msgEl.style.cssText = 'font-size:14px;line-height:1.5;margin-bottom:20px;white-space:pre-wrap';
+      msgEl.textContent = msg;
+      box.appendChild(msgEl);
+      const btnWrap = document.createElement('div');
+      btnWrap.style.cssText = 'display:flex;gap:12px;justify-content:flex-end';
+      const okBtn = document.createElement('button');
+      okBtn.textContent = 'OK';
+      okBtn.style.cssText = 'padding:10px 28px;background:#e94560;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;font-weight:600';
+      const cancelBtn = document.createElement('button');
+      cancelBtn.textContent = 'Cancel';
+      cancelBtn.style.cssText = 'padding:10px 28px;background:#6c757d;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;font-weight:600';
+      btnWrap.appendChild(okBtn);
+      btnWrap.appendChild(cancelBtn);
+      box.appendChild(btnWrap);
+      overlay.appendChild(box);
+      document.body.appendChild(overlay);
+      okBtn.focus();
+      okBtn.onclick = () => { overlay.remove(); resolve(true); };
+      cancelBtn.onclick = () => { overlay.remove(); resolve(false); };
+      overlay.addEventListener('keydown', function handler(e) {
+        if (e.key === 'Escape') { overlay.remove(); resolve(false); overlay.removeEventListener('keydown', handler); }
       });
-    } catch (e) {}
-  };
-
-  scriptlets['set-constant'] = function(propPath, value) {
-    try {
-      const parts = propPath.split('.');
-      let obj = window;
-      for (let i = 0; i < parts.length - 1; i++) {
-        if (!obj[parts[i]]) obj[parts[i]] = {};
-        obj = obj[parts[i]];
-      }
-      Object.defineProperty(obj, parts[parts.length - 1], {
-        get: function() { return value; },
-        set: function() {},
-        configurable: false
-      });
-    } catch (e) {}
-  };
+    });
+  }
 
   scriptlets['nano-setInterval-booster'] = function(multiplier) {
-    const m = parseFloat(multiplier) || 0.01;
-    const orig = window.setInterval;
-    window.setInterval = function(fn, delay) {
-      return orig.call(window, fn, Math.max(1, Math.floor(delay * m)));
-    };
+    const m = JSON.stringify(parseFloat(multiplier) || 0.01);
+    injectMainWorldCode('(function(){var orig=window.setInterval;window.setInterval=function(fn,delay){return orig.call(window,fn,Math.max(1,Math.floor(delay*'+m+')))};})();');
   };
 
   scriptlets['addEventListener-defuser'] = function(type) {
-    const orig = EventTarget.prototype.addEventListener;
-    EventTarget.prototype.addEventListener = function(eventType, fn, opts) {
-      if (eventType && eventType.toString() === type) return;
-      return orig.call(this, eventType, fn, opts);
-    };
+    const t = JSON.stringify(type);
+    injectMainWorldCode('(function(){var orig=EventTarget.prototype.addEventListener;EventTarget.prototype.addEventListener=function(evt,fn,opts){if(evt&&evt.toString()===' + t + ')return;return orig.call(this,evt,fn,opts);}})();');
   };
+
+  function isFirstParty(url) {
+    try {
+      const reqHost = new URL(url).hostname.replace(/^www\./, '');
+      return reqHost === window.location.hostname.replace(/^www\./, '');
+    } catch { return false; }
+  }
 
   scriptlets['prevent-xhr'] = function(urlPattern) {
     const orig = XMLHttpRequest.prototype.open;
     XMLHttpRequest.prototype.open = function(method, url) {
-      if (url && url.toString().includes(urlPattern)) {
+      if (url && url.toString().includes(urlPattern) && !isFirstParty(url)) {
+        orig.apply(this, arguments);
+        this.abort();
         return;
       }
       return orig.apply(this, arguments);
@@ -81,81 +133,89 @@
   };
 
   scriptlets['prevent-fetch'] = function(urlPattern) {
-    const orig = window.fetch;
-    window.fetch = function(url, options) {
-      const urlStr = typeof url === 'string' ? url : (url ? url.url || url.toString() : '');
-      if (urlStr.includes(urlPattern)) {
-        return Promise.resolve(new Response('', { status: 200 }));
-      }
-      return orig.apply(this, arguments);
-    };
+    const pat = JSON.stringify(urlPattern);
+    injectMainWorldCode(`
+      (function(){
+        var orig = window.fetch;
+        window.fetch = function(url, options) {
+          var urlStr = typeof url === 'string' ? url : (url ? url.url || url.toString() : '');
+          if (urlStr.indexOf(${pat}) !== -1 && !/^(https?:\\/\\/)?([^\\/]+\\.)?${window.location.hostname.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/i.test(urlStr)) {
+            return Promise.resolve(new Response('', { status: 200 }));
+          }
+          return orig.apply(this, arguments);
+        };
+      })();
+    `);
   };
 
   scriptlets['json-prune'] = function(propPath) {
-    const origParse = JSON.parse;
-    JSON.parse = function(text, reviver) {
-      const result = origParse.call(this, text, reviver);
-      if (result && typeof result === 'object') {
-        pruneProp(result, propPath);
-      }
-      return result;
-    };
-    function pruneProp(obj, path) {
-      if (!obj || !path) return;
-      const parts = path.split('.');
-      let current = obj;
-      for (let i = 0; i < parts.length - 1; i++) {
-        if (current[parts[i]] === undefined) return;
-        if (Array.isArray(current)) {
-          for (const item of current) pruneProp(item, path);
-          return;
-        }
-        current = current[parts[i]];
-      }
-      delete current[parts[parts.length - 1]];
-    }
+    const path = JSON.stringify(propPath);
+    injectMainWorldCode(`
+      (function(){
+        var origParse = JSON.parse;
+        JSON.parse = function(text, reviver) {
+          var result = origParse.call(this, text, reviver);
+          if (result && typeof result === 'object') {
+            (function pruneProp(obj, p) {
+              if (!obj || !p) return;
+              var parts = p.split('.');
+              var current = obj;
+              for (var i = 0; i < parts.length - 1; i++) {
+                if (Array.isArray(current)) {
+                  for (var j = 0; j < current.length; j++) pruneProp(current[j], parts.slice(i).join('.'));
+                  return;
+                }
+                if (current[parts[i]] === undefined) return;
+                current = current[parts[i]];
+              }
+              delete current[parts[parts.length - 1]];
+            })(result, ${path});
+          }
+          return result;
+        };
+      })();
+    `);
   };
 
   scriptlets['abort-current-inline-script'] = function(pattern) {
     if (!pattern) return;
     const origCreateElement = document.createElement.bind(document);
+    var storedTextMap = new WeakMap();
     document.createElement = function(tag, options) {
       const el = origCreateElement(tag, options);
       if (tag && tag.toLowerCase() === 'script') {
-        const origSetAttribute = el.setAttribute.bind(el);
-        el.setAttribute = function(name, value) {
-          if (name === 'src') return;
-          return origSetAttribute(name, value);
-        };
-        Object.defineProperty(el, 'src', { set: function(v) {} });
+        storedTextMap.set(el, '');
+        var origTextDesc = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(el), 'text');
+        var origTcDesc = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(el), 'textContent');
         Object.defineProperty(el, 'text', {
-          get: function() { return ''; },
+          get: function() { return storedTextMap.get(el) || ''; },
           set: function(v) {
             if (typeof v === 'string' && v.includes(pattern)) return;
-            try { el.appendChild(document.createTextNode(v)); } catch (e) {}
+            storedTextMap.set(el, v);
+            if (origTextDesc && origTextDesc.set) origTextDesc.set.call(el, v);
           },
           configurable: true
         });
         Object.defineProperty(el, 'textContent', {
-          get: function() { return ''; },
+          get: function() { return storedTextMap.get(el) || ''; },
           set: function(v) {
             if (typeof v === 'string' && v.includes(pattern)) return;
-            try { el.appendChild(document.createTextNode(v)); } catch (e) {}
+            storedTextMap.set(el, v);
+            if (origTcDesc && origTcDesc.set) origTcDesc.set.call(el, v);
           },
           configurable: true
         });
       }
       return el;
     };
-    const origWrite = document.write.bind(document);
-    document.write = function(html) {
-      if (typeof html === 'string' && html.includes(pattern)) return;
-      return origWrite(html);
-    };
   };
 
   scriptlets['remove-attr'] = function(selector, attr) {
     if (!selector || !attr) return;
+    const key = 'rma_' + selector + '_' + attr;
+    if (scriptlets._done && scriptlets._done.has(key)) return;
+    if (!scriptlets._done) scriptlets._done = new Set();
+    scriptlets._done.add(key);
     const els = document.querySelectorAll(selector);
     for (const el of els) el.removeAttribute(attr);
     const obs = new MutationObserver(() => {
@@ -167,6 +227,10 @@
 
   scriptlets['remove-class'] = function(selector, cls) {
     if (!selector || !cls) return;
+    const key = 'rmc_' + selector + '_' + cls;
+    if (scriptlets._done && scriptlets._done.has(key)) return;
+    if (!scriptlets._done) scriptlets._done = new Set();
+    scriptlets._done.add(key);
     const els = document.querySelectorAll(selector);
     for (const el of els) el.classList.remove(cls);
     const obs = new MutationObserver(() => {
@@ -194,7 +258,7 @@
     if (!bypasses) return;
     for (const [name, ...args] of bypasses) {
       if (scriptlets[name]) {
-        try { scriptlets[name].apply(null, args); } catch (e) {}
+        try { scriptlets[name].apply(null, args); } catch (e) { debugError('Scriptlet failed', name, e); }
       }
     }
   }
@@ -212,16 +276,7 @@
       ['abp', 'detected'],
     ];
     for (const [ns, prop] of targets) {
-      try {
-        if (window[ns]) {
-          Object.defineProperty(window[ns], prop, {
-            get: function() { return false; },
-            set: function() {},
-            configurable: false
-          });
-        }
-        scriptlets['set-constant'](ns + '.' + prop, false);
-      } catch (e) {}
+      scriptlets['set-constant'](ns + '.' + prop, false);
     }
   }
 
@@ -236,9 +291,14 @@
 
   function hostname() { return window.location.hostname.toLowerCase().replace(/^www\./, ''); }
   function isYouTube() { const h = hostname(); return h === 'youtube.com' || h === 'm.youtube.com'; }
-  function isFacebookOrigin() { const h = window.location.hostname.toLowerCase(); return h.endsWith('facebook.com') || h.endsWith('fb.com') || h.endsWith('facebook.net') || h.endsWith('fbcdn.net'); }
+  function isFacebookOrigin() { const h = window.location.hostname.toLowerCase(); return h === 'facebook.com' || h.endsWith('.facebook.com') || h === 'fb.com' || h.endsWith('.fb.com') || h === 'facebook.net' || h.endsWith('.facebook.net') || h === 'fbcdn.net' || h.endsWith('.fbcdn.net'); }
   function isIsolatedPage() { const h = hostname(); return ISOLATED_DOMAINS.some(d => { const c = d.replace(/^www\./, ''); return h === c || h.endsWith('.' + c); }); }
   function isCryptoSite() { const h = hostname(); return h === 'coinmarketcap.com' || h.endsWith('.coinmarketcap.com') || h === 'bitget.com' || h.endsWith('.bitget.com') || h === 'coingecko.com' || h.endsWith('.coingecko.com'); }
+  function isAdminPanel() {
+    const h = window.location.hostname.toLowerCase();
+    const p = window.location.pathname;
+    return h.includes('web-hosting.com') || h.includes('.cpanel.') || h === 'cpanel' || p.includes('cpsess') || /\/frontend\/(jupiter|paper_lantern|x3|x5)\//.test(p) || h.includes('.whm.');
+  }
 
   // Inject hide-rule style tag immediately (before any async callback)
   try {
@@ -247,9 +307,10 @@
     (document.head || document.documentElement).appendChild(_st);
   } catch (_e) {}
 
-  chrome.storage.local.get(['durgashield_config', 'durgashield_hide_rules'], (result) => {
+  _b.storage.local.get(['durgashield_config', 'durgashield_hide_rules', 'durgashield_enabled'], (result) => {
     const saved = result.durgashield_config;
     if (saved) Object.assign(config, saved);
+    if (result.durgashield_enabled === false) { siteDisabled = true; }
     var hideRules = result.durgashield_hide_rules || {};
     var host = hostname();
     var selectors = hideRules[host];
@@ -264,8 +325,9 @@
     init();
   });
 
-  chrome.runtime.onMessage.addListener((msg) => {
-    if (msg.type === 'configUpdated') {
+  _b.runtime.onMessage.addListener((msg, sender) => {
+    if (!sender || sender.id !== _b.runtime.id) return;
+    if (msg.type === MSG.CONFIG_UPDATED) {
       Object.assign(config, msg.config);
       if (!config.ads) {
         const s = document.getElementById('dgs-instant-hide');
@@ -276,10 +338,39 @@
         if (bar) { bar.remove(); document.documentElement.style.marginTop = ''; }
       }
     }
-    if (msg.type === 'activateZapper' || msg.action === 'START_ELEMENT_PICKER') {
+    if (msg.type === MSG.ACTIVATE_ZAPPER || msg.action === 'START_ELEMENT_PICKER') {
       activateZapper();
     }
-    if (msg.type === 'setJsBlocked') {
+    if (msg.type === MSG.SET_SITE_DISABLED) {
+      siteDisabled = msg.disabled === true;
+      return;
+    }
+    if (msg.type === MSG.SET_ENABLED) {
+      siteDisabled = !msg.enabled;
+      if (!msg.enabled) {
+        document.querySelectorAll('.ds-hidden').forEach(function(el) { el.classList.remove('ds-hidden'); });
+        var s = document.getElementById('dgs-instant-hide');
+        if (s) s.remove();
+      } else {
+        if (config.ads) {
+          var existing = document.getElementById('dgs-instant-hide');
+          if (!existing) {
+            var hs = document.createElement('style');
+            hs.id = 'dgs-instant-hide';
+            hs.textContent = 'ins.adsbygoogle,amp-ad,google-ad,.ad-panel,div[id^="div-gpt-ad"],div[id^="google_ads_iframe"],div[id*="google_adsense"],div[id*="gpt-ad-"],div[id*="gpt_ad_"],div[id^="ad-"],div[class*="ad-container"],div[class*="ad-wrapper"],div[class*="adslot"],div[data-adunit],div[data-ad-],iframe[src*="doubleclick.net"],iframe[src*="googlesyndication.com"],iframe[src*="googleadservices.com"],iframe[src*="amazon-adsystem.com"],iframe[src*="adservice.google.com"],.adsbygoogle[data-ad-status="unfilled"],[data-element="barcode"],[data-element="campaign"],[data-izone*="uc-area"],[data-element="branding"],div[id*="taboola"],div[class*="taboola"],div[class*="trc_"],div[id*="taboola-"],div[class*="video-rec"],div[class*="rec-item"],div[class*="organic-rec"],div[class*="native-rec"],div[class*="suggestions"],div[data-type="rbox"],div[data-placement*="Taboola"],.trc_related_container,.trc_rbox_div,.videocube-unit{display:none!important}';
+            document.documentElement.appendChild(hs);
+          }
+          removeAdPlaceholders();
+          removeSpacerDivs();
+        }
+      }
+      return;
+    }
+    if (msg.type === 'setDebug') {
+      debugMode = msg.enabled === true;
+      return;
+    }
+    if (msg.type === MSG.SET_JS_BLOCKED) {
       jsBlocked = msg.blocked;
       if (jsBlocked) {
         document.querySelectorAll('script[src]').forEach(s => {
@@ -287,16 +378,43 @@
         });
       }
     }
-    if (msg.type === 'stealthUpdated') {
+    if (msg.type === MSG.STEALTH_UPDATED) {
       Object.assign(stealthConfig, msg.config || {});
       applyStealth();
     }
-    if (msg.type === 'cosmeticFilters' || msg.type === 'applyCosmetics') {
+    if (msg.type === MSG.COSMETIC_FILTERS || msg.type === MSG.APPLY_COSMETICS) {
       applyCosmeticFilters(msg.cosmetics);
+    }
+    if (msg.type === MSG.SITE_PREFS) {
+      sitePrefs = msg.prefs || {};
     }
   });
 
+  var DS_STYLE = null;
+  function injectDSStyle(rules) {
+    if (!DS_STYLE) {
+      DS_STYLE = document.createElement('style');
+      DS_STYLE.id = 'dgs-core-style';
+      document.documentElement.appendChild(DS_STYLE);
+    }
+    DS_STYLE.textContent += (DS_STYLE.textContent ? '\n' : '') + rules;
+  }
+
+  /* Inject CSS into document — shadow DOM penetration requires a per-component observer */
+  function injectStyleDeep(css) {
+    injectDSStyle(css);
+  }
+
   function init() {
+    if (siteDisabled) { debugLog('Site disabled, skipping init'); return; }
+
+    injectDSStyle('.ds-hidden{display:none!important}.ds-blocked{display:none!important}.ds-outlined{outline:2px solid rgba(233,69,96,0.4)!important}.ds-override-scroll{overflow:auto!important}.ds-opacity-zero{opacity:0!important}');
+
+    _b.storage.local.get(SITE_PREFS_KEY, (r) => {
+      sitePrefs = r[SITE_PREFS_KEY] || {};
+    });
+    debugLog('init() on', hostname());
+
     const host = hostname();
     const isGoogle = host.endsWith('.google.com') || host === 'google.com';
     let isSubFrame;
@@ -319,11 +437,21 @@
       initGenAIDLP();
       detectDefacement();
       detectPhoneScams();
+      detectScareware();
       detectPhishingLinks();
       applyFBPrivacy();
     } else {
       if (config.popupBlocking && !_isAmazonPayment) overrideWindowOpen();
       if (config.ads && !isYouTube() && !_isAmazonPayment) removeAdElements();
+    }
+    /* Fallback: periodic placeholder check for late-loading ad containers (up to 60s) */
+    if (config.ads && !isSubFrame) {
+      var _phRuns = 0;
+      (function _phCheck() {
+        removeAdPlaceholders();
+        removeSpacerDivs();
+        if (++_phRuns < 20) setTimeout(_phCheck, 3000);
+      })();
     }
     startObserver();
   }
@@ -369,6 +497,30 @@
     return el.tagName.toLowerCase() + '.' + clean.map(c => CSS.escape(c)).join('.');
   }
 
+  function getNthChildPath(el, maxDepth) {
+    const parts = [];
+    let current = el;
+    maxDepth = maxDepth || 4;
+    while (current && current !== document.body && current !== document.documentElement && parts.length < maxDepth) {
+      const parent = current.parentElement;
+      let nth = 1;
+      if (parent) {
+        const siblings = parent.children;
+        for (let i = 0; i < siblings.length; i++) {
+          if (siblings[i] === current) { nth = i + 1; break; }
+        }
+      }
+      const tag = current.tagName.toLowerCase();
+      if (current.id && isValidId(current.id)) {
+        parts.unshift('#' + CSS.escape(current.id));
+        break;
+      }
+      parts.unshift(tag + ':nth-child(' + nth + ')');
+      current = parent;
+    }
+    return parts.join(' > ');
+  }
+
   function generateSelector(el) {
     const target = findContainer(el);
     if (target.id && isValidId(target.id)) return '#' + CSS.escape(target.id);
@@ -376,31 +528,28 @@
     if (attrSel) return attrSel;
     const classSel = getStableClassSelector(target);
     if (classSel) return classSel;
-    let path = [];
-    let current = target;
-    while (current && current !== document.body && current !== document.documentElement && path.length < 4) {
-      let selector = current.tagName.toLowerCase();
-      if (current.id && isValidId(current.id)) {
-        path.unshift('#' + CSS.escape(current.id));
-        break;
-      }
-      if (current.className && typeof current.className === 'string') {
-        const classes = current.className.trim().split(/\s+/).filter(c => c.length > 0 && !/\d/.test(c) && c !== 'active' && c !== 'hover').slice(0, 2);
-        if (classes.length > 0) selector += '.' + classes.map(c => CSS.escape(c)).join('.');
-      }
-      path.unshift(selector);
-      current = current.parentElement;
-    }
-    return path.join(' > ').replace(/:nth-child\(\d+\)/g, '');
+    return getNthChildPath(target);
   }
 
   function isSafeSelector(selector) {
     try { return document.querySelectorAll(selector).length < 10; } catch (e) { return false; }
   }
 
+  function cleanupZapper() {
+    zapperActive = false;
+    document.documentElement.classList.remove('durgashield-zapper-mode');
+    const style = document.getElementById('durgashield-zapper-style');
+    if (style) style.remove();
+    const preview = document.getElementById('durgashield-preview-style');
+    if (preview) preview.remove();
+    const confirmBox = document.getElementById('durgashield-zapper-confirm');
+    if (confirmBox) confirmBox.remove();
+  }
+
   function activateZapper() {
     if (zapperActive) return;
     zapperActive = true;
+    console.log('[DurgaShield] Zapper active');
 
     const style = document.createElement('style');
     style.id = 'durgashield-zapper-style';
@@ -415,6 +564,7 @@
     let previewStyle = null;
 
     function onMouseMove(e) {
+      if (!zapperActive) return;
       if (hovered) { hovered.classList.remove('durgashield-zapper-hover'); hovered = null; }
       const el = document.elementFromPoint(e.clientX, e.clientY);
       if (el && el !== document.body && el !== document.documentElement) {
@@ -424,14 +574,12 @@
     }
 
     function onClick(e) {
+      if (!zapperActive) return;
       e.preventDefault();
       e.stopPropagation();
       if (!hovered) return;
       const el = hovered;
-      zapperActive = false;
-      document.documentElement.classList.remove('durgashield-zapper-mode');
-      document.removeEventListener('mousemove', onMouseMove, true);
-      document.removeEventListener('click', onClick, true);
+      cleanupZapper();
       el.classList.remove('durgashield-zapper-hover');
       const elSrc = el.src || el.href || '';
       const elText = (el.textContent || '').trim().substring(0, 60);
@@ -447,6 +595,16 @@
       document.head.appendChild(previewStyle);
       showConfirmBox(selector, elSrc, elText, elTag);
     }
+
+    function onKeyDown(e) {
+      if (e.key === 'Escape') {
+        exitZapper();
+      }
+    }
+
+    document.addEventListener('keydown', onKeyDown, true);
+    document.addEventListener('mousemove', onMouseMove, true);
+    document.addEventListener('click', onClick, true);
 
     function showConfirmBox(selector, elSrc, elText, elTag) {
       const box = document.createElement('div');
@@ -507,43 +665,57 @@
       document.getElementById('dgs-confirm-block').onclick = function() {
         commitBlock(selector);
         box.remove();
-        cleanup();
+        exitZapper();
       };
       document.getElementById('dgs-cancel-block').onclick = function() {
         if (previewStyle) previewStyle.remove();
         box.remove();
-        cleanup();
+        exitZapper();
       };
     }
 
+    const blockedSelectors = [];
+
     function commitBlock(selector) {
       document.querySelectorAll(selector).forEach(el => el.remove());
-      chrome.runtime.sendMessage({ type: 'addHideRule', url: window.location.href, selector });
-      chrome.runtime.sendMessage({ type: 'blockCount', count: 1 });
+      _b.runtime.sendMessage({ type: MSG.ADD_HIDE_RULE, url: window.location.href, selector });
+      _b.runtime.sendMessage({ type: MSG.BLOCK_COUNT, count: 1 });
+      blockedSelectors.push(selector);
     }
 
-    function onKeyDown(e) {
-      if (e.key === 'Escape') cleanup();
+    function showUndoBanner() {
+      if (!blockedSelectors.length) return;
+      const banner = document.createElement('div');
+      banner.id = 'dgs-zapper-undo';
+      banner.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:2147483647;background:#1a1a2e;color:#fff;padding:14px 24px;border-radius:10px;font-family:Arial,sans-serif;font-size:14px;display:flex;gap:16px;align-items:center;box-shadow:0 4px 20px rgba(0,0,0,0.3)';
+      banner.textContent = blockedSelectors.length + ' element(s) blocked';
+      const undoBtn = document.createElement('button');
+      undoBtn.textContent = 'Undo';
+      undoBtn.style.cssText = 'padding:6px 20px;background:#e94560;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600';
+      undoBtn.onclick = function() {
+        for (const sel of blockedSelectors) {
+          _b.runtime.sendMessage({ type: MSG.REMOVE_HIDE_RULE, url: window.location.href, selector: sel });
+          const style = document.getElementById('durgashield-preview-style');
+          if (style && style.textContent.includes(sel)) {
+            style.textContent = style.textContent.replace(new RegExp(sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*\\{[^}]*\\}', 'g'), '');
+          }
+        }
+        blockedSelectors.length = 0;
+        banner.remove();
+      };
+      banner.appendChild(undoBtn);
+      document.body.appendChild(banner);
+      setTimeout(() => { if (banner.parentNode) banner.remove(); }, 8000);
     }
 
-    function cleanup() {
-      zapperActive = false;
-      document.documentElement.classList.remove('durgashield-zapper-mode');
-      const s = document.getElementById('durgashield-zapper-style');
-      if (s) s.remove();
-      const p = document.getElementById('durgashield-preview-style');
-      if (p) p.remove();
-      const b = document.getElementById('durgashield-zapper-confirm');
-      if (b) b.remove();
+    function exitZapper() {
       if (hovered) { hovered.classList.remove('durgashield-zapper-hover'); hovered = null; }
       document.removeEventListener('mousemove', onMouseMove, true);
       document.removeEventListener('click', onClick, true);
-      document.removeEventListener('keydown', onKeyDown);
+      document.removeEventListener('keydown', onKeyDown, true);
+      cleanupZapper();
+      showUndoBanner();
     }
-
-    document.addEventListener('mousemove', onMouseMove, true);
-    document.addEventListener('click', onClick, true);
-    document.addEventListener('keydown', onKeyDown);
   }
 
   function applyCosmeticFilters(cosmetics) {
@@ -552,34 +724,78 @@
     const cosmeticSkipHosts = ['keep.google.com', 'mail.google.com', 'docs.google.com', 'sheets.google.com', 'slides.google.com', 'calendar.google.com'];
     if (cosmeticSkipHosts.some(h => host.includes(h))) return;
     const hostParts = host.split('.');
-    const styleId = 'durgashield-cosmetic-style';
-    let old = document.getElementById(styleId);
-    if (old) old.remove();
-    const selectors = [];
+    const hideSelectors = [];
+    const exceptionSelectors = new Set();
     for (const c of cosmetics) {
-      if (!c.domain) { selectors.push(c.selector); continue; }
-      const domains = c.domain.split(',').map(d => d.trim()).filter(Boolean);
-      const match = domains.some(d => {
+      const isException = c.exception === true;
+      const domains = c.domain ? c.domain.split(',').map(d => d.trim()).filter(Boolean) : [];
+      const matches = domains.length === 0 || domains.some(d => {
         if (d === '*' || d === host) return true;
         return hostParts.some((_, i) => d === hostParts.slice(i).join('.'));
       });
-      if (match) selectors.push(c.selector);
+      if (!matches) continue;
+      if (isException) {
+        exceptionSelectors.add(c.selector);
+      } else if (!exceptionSelectors.has(c.selector)) {
+        hideSelectors.push(c.selector);
+      }
     }
-    if (!selectors.length) return;
-    const style = document.createElement('style');
-    style.id = styleId;
-    style.textContent = selectors.map(s => s + ' { display: none !important; }').join('\n');
-    document.head.appendChild(style);
+    const finalSelectors = hideSelectors.filter(s => !exceptionSelectors.has(s));
+    if (!finalSelectors.length) return;
+
+    // Use CSSStyleSheet.insertRule() for incremental rule injection.
+    // Reuse the existing dgs-hide-css stylesheet if available; otherwise create one.
+    let sheet = null;
+    let existing = document.getElementById('dgs-hide-css');
+    if (existing && existing.sheet) {
+      sheet = existing.sheet;
+    } else {
+      existing = document.getElementById('dgs-cosmetic-css');
+      if (existing && existing.sheet) {
+        sheet = existing.sheet;
+      } else {
+        const style = document.createElement('style');
+        style.id = 'dgs-cosmetic-css';
+        document.head.appendChild(style);
+        sheet = style.sheet;
+      }
+    }
+    // Track injected rules per stylesheet for dedup
+    if (!sheet._dgsRules) sheet._dgsRules = new Set();
+    const existingRules = sheet._dgsRules;
+    for (const sel of finalSelectors) {
+      if (existingRules.has(sel)) continue;
+      try {
+        sheet.insertRule(sel + ' { display: none !important; }', sheet.cssRules.length);
+        existingRules.add(sel);
+      } catch (e) {}
+    }
+    // Remove stale rules that no longer match
+    const finalSet = new Set(finalSelectors);
+    const stale = [];
+    for (const sel of existingRules) {
+      if (!finalSet.has(sel)) stale.push(sel);
+    }
+    for (const sel of stale) {
+      existingRules.delete(sel);
+      const rules = sheet.cssRules;
+      for (let i = 0; i < rules.length; i++) {
+        if (rules[i].selectorText === sel) {
+          sheet.deleteRule(i);
+          break;
+        }
+      }
+    }
   }
 
   function loadCosmeticFilters() {
-    chrome.storage.local.get('durgashield_cosmetic_filters', (r) => {
+    _b.storage.local.get('durgashield_cosmetic_filters', (r) => {
       if (r.durgashield_cosmetic_filters) applyCosmeticFilters(r.durgashield_cosmetic_filters);
     });
   }
 
   function applyCustomHideRules() {
-    chrome.storage.local.get('durgashield_selector_hits', (r) => {
+    _b.storage.local.get('durgashield_selector_hits', (r) => {
       var hits = r.durgashield_selector_hits || {};
       var changed = false;
       var styleTag = document.getElementById('dgs-hide-css');
@@ -592,7 +808,7 @@
           changed = true;
         }
       }
-      if (changed) chrome.storage.local.set({ durgashield_selector_hits: hits });
+      if (changed) _b.storage.local.set({ durgashield_selector_hits: hits });
     });
   }
 
@@ -609,7 +825,14 @@
     subSpan.style.cssText = 'opacity:0.8;font-size:11px;';
     subSpan.textContent = '\u2022 Your activity here is isolated';
     bar.appendChild(subSpan);
-    document.documentElement.style.marginTop = '32px';
+    /* Only shift down if no fixed/sticky navbar — avoids breaking site layout */
+    var hasFixedNavbar = !!document.querySelector(
+      'header[style*="position:fixed"], nav[style*="position:fixed"], ' +
+      '[style*="position:sticky"], header.sticky, .fixed-header, .navbar-fixed'
+    );
+    if (!hasFixedNavbar) {
+      document.documentElement.style.marginTop = '32px';
+    }
     document.body.prepend(bar);
   }
 
@@ -617,18 +840,17 @@
     const now = Date.now();
     if (blockFacebookEmbeds._lastRun && now - blockFacebookEmbeds._lastRun < 3000) return;
     blockFacebookEmbeds._lastRun = now;
-    const fbPatterns = ['facebook.com', 'www.facebook.com', 'fb.com', 'facebook.net', 'connect.facebook.net', 'fbcdn.net', 'fbcdn.com'];
-    function isFbUrl(url) {
+    const fbTrackingPatterns = ['connect.facebook.net', 'staticxx.facebook.com'];
+    function isTrackingUrl(url) {
       if (!url) return false;
-      try { return fbPatterns.some(p => new URL(url).hostname.includes(p)); } catch { return url.includes('facebook.com') || url.includes('fbcdn'); }
+      try { return fbTrackingPatterns.some(p => new URL(url).hostname.includes(p)); } catch { return false; }
     }
     let fbCount = 0;
-    const iframes = document.querySelectorAll('iframe');
-    for (const iframe of iframes) { if (isFbUrl(iframe.src)) { iframe.remove(); fbCount++; } }
     const scripts = document.querySelectorAll('script');
-    for (const script of scripts) { if (isFbUrl(script.src)) { script.remove(); fbCount++; } }
-    const imgs = document.querySelectorAll('img[src*="facebook"], img[src*="fbcdn"]');
-    for (const img of imgs) { img.remove(); fbCount++; }
+    for (const script of scripts) { if (isTrackingUrl(script.src)) { script.remove(); fbCount++; } }
+    /* Remove FB SDK iframes (like login buttons embedded via fb:login-button) */
+    const iframes = document.querySelectorAll('iframe[src*="facebook.com/plugins"], iframe[src*="connect.facebook.net"]');
+    for (const iframe of iframes) { iframe.remove(); fbCount++; }
     const fbRoot = document.getElementById('fb-root');
     if (fbRoot) fbRoot.remove();
     let child = document.querySelector('div[data-facebook], iframe[title*="fb"], iframe[title*="Facebook"]');
@@ -639,18 +861,18 @@
 
   function applyExistingFeatures() {
     if (_isAmazonPayment) return;
-    if (config.popupBlocking) overrideWindowOpen();
-    if (config.videoRedirect === true) preventVideoRedirect();
-    if (config.ads) { if (isYouTube()) blockYouTubeAds(); else if (!isCryptoSite()) removeAdElements(); }
-    if (config.ads) removeAdPlaceholders();
-    if (config.crypto && !isCryptoSite()) { detectCryptoMining(); detectCryptoScams(); }
-    if (config.phishing) { detectFakeLoginForms(); detectFakeAddressBar(); detectHttpPasswordFields(); }
-    if (config.malware) { detectKeyloggers(); detectTechSupportScams(); }
-    if (config.enhancedTracking !== false) preventClipboardHijack();
-    if (config.ads && window.location.hostname.includes('facebook.com')) removeFacebookAds();
-    if (config.ads && !isCryptoSite()) dismissInterstitials();
-    if (config.metadataCleanup) setupMetadataCleanup();
-    if (config.ads) { blockTwitchAds(); blockGmailAds(); removeSocialFeedAds(); blockStreamingAds(); }
+    if (config.popupBlocking && isFeatureAllowed('popupBlocking')) overrideWindowOpen();
+    if (config.videoRedirect === true && isFeatureAllowed('videoRedirect')) preventVideoRedirect();
+    if (config.ads && isFeatureAllowed('ads')) { if (isYouTube()) blockYouTubeAds(); else if (!isCryptoSite()) removeAdElements(); }
+    if (config.ads && isFeatureAllowed('ads')) removeAdPlaceholders();
+    if (config.crypto && !isCryptoSite() && isFeatureAllowed('crypto')) { detectCryptoMining(); detectCryptoScams(); }
+    if (config.phishing && isFeatureAllowed('phishing')) { detectFakeLoginForms(); detectFakeAddressBar(); detectHttpPasswordFields(); }
+    if (config.malware && isFeatureAllowed('malware')) { detectKeyloggers(); detectTechSupportScams(); }
+    if (config.enhancedTracking !== false && isFeatureAllowed('enhancedTracking')) preventClipboardHijack();
+    if (config.ads && isFeatureAllowed('ads') && window.location.hostname.includes('facebook.com')) removeFacebookAds();
+    if (config.ads && isFeatureAllowed('ads') && !isCryptoSite()) dismissInterstitials();
+    if (config.metadataCleanup && isFeatureAllowed('metadataCleanup')) setupMetadataCleanup();
+    if (config.ads && isFeatureAllowed('ads')) { blockTwitchAds(); blockGmailAds(); removeSocialFeedAds(); blockStreamingAds(); }
   }
 
   let videoRedirectActive = false;
@@ -659,11 +881,23 @@
     videoRedirectActive = true;
 
     function isVideoPlayer(el) {
-      if (el.closest('video, [class*="video"], [class*="player"], [class*="vjs-"], [id*="video"], [id*="player"], [class*="jwplayer"], [class*="mejs"]')) return true;
-      for (let p = el; p && p !== document.body; p = p.parentElement) {
-        if (p.querySelector('video')) return true;
-      }
-      return false;
+      /* Use bounding-box overlap with <video> elements instead of class heuristics
+         — avoids false positives on news sites where articles share a container with embeds */
+      var vid = document.querySelector('video');
+      if (!vid) return false;
+      try {
+        var vb = vid.getBoundingClientRect();
+        if (vb.width === 0 || vb.height === 0) return false;
+        var eb = el.getBoundingClientRect();
+        /* Check if clicked element overlaps with video or is within 60px (for control bars / overlays) */
+        var margin = 60;
+        var expanded = {
+          left: vb.left - margin, right: vb.right + margin,
+          top: vb.top - margin, bottom: vb.bottom + margin
+        };
+        return !(eb.right < expanded.left || eb.left > expanded.right ||
+                 eb.bottom < expanded.top || eb.top > expanded.bottom);
+      } catch (e) { return false; }
     }
 
     document.addEventListener('click', function(e) {
@@ -671,12 +905,11 @@
       for (let el = e.target; el && el !== document.body; el = el.parentElement) {
         if (el.tagName === 'A' && el.href && !el.href.startsWith('javascript') && !el.href.startsWith('#') && el.href !== window.location.href && el.href !== document.baseURI) {
           e.preventDefault();
-          e.stopPropagation();
           queueBlockCount(1);
           return;
         }
       }
-    }, true);
+    }, false);
   }
   let windowOpenOverridden = false;
   const originalOpen = window.open;
@@ -685,25 +918,38 @@
     windowOpenOverridden = true;
     const host = window.location.hostname;
     if (host.includes('amazon.') || host.includes('payments.')) return;
-    window.open = function() {
-      const url = arguments[0];
-      if (!url) return null;
-      try {
-        const parsed = new URL(url, window.location.href);
-        const hostname = parsed.hostname.toLowerCase();
-        if (['ad', 'ads', 'banner', 'popup', 'pop-up', 'popunder', 'sponsor', 'promo', 'offer', 'win', 'prize', 'gift', 'click', 'track', 'tracking', 'affiliate', 'redirect'].some(k => hostname.includes(k))) { queueBlockCount(1); return null; }
-        if ([/\/ads?\//i, /\/(ads[-_.\/]|banner[-_.\/]|popup[-_.\/]|track[-_.\/])/i, /\/click?\//i, /\/(redirect|offer)[-_.\/]/i].some(p => p.test(parsed.pathname) || p.test(parsed.search))) { queueBlockCount(1); return null; }
-      } catch (e) {}
-      try { return originalOpen.apply(window, arguments); } catch (e) { return null; }
-    };
+    injectMainWorldCode(`
+      (function(){
+        var orig = window.open.bind(window);
+        window.open = function() {
+          var url = arguments[0];
+          if (!url) return null;
+          try {
+            var parsed = new URL(url, window.location.href);
+            var hostname = parsed.hostname.toLowerCase();
+            var blocked = ['ad','ads','banner','popup','pop-up','popunder','sponsor','promo','offer','win','prize','gift','click','track','tracking','affiliate','redirect'];
+            if (blocked.some(function(k){return hostname.indexOf(k)!==-1;})) {
+              document.dispatchEvent(new CustomEvent('dgs-bridge',{detail:{type:'queueBlock',count:1}}));
+              return null;
+            }
+            var pats = [/\\/ads?\\//i,/\\/(ads[-_.\\/]|banner[-_.\\/]|popup[-_.\\/]|track[-_.\\/])/i,/\\/click?\\//i,/\\/(redirect|offer)[-_.\\/]/i];
+            if (pats.some(function(p){return p.test(parsed.pathname)||p.test(parsed.search);})) {
+              document.dispatchEvent(new CustomEvent('dgs-bridge',{detail:{type:'queueBlock',count:1}}));
+              return null;
+            }
+          } catch(e) {}
+          try { return orig.apply(window, arguments); } catch(e) { return null; }
+        };
+      })();
+    `);
   }
 
   let blockReportTimer = null;
   let pendingBlockCount = 0;
   function flushBlockCount() {
     if (pendingBlockCount > 0) {
-      chrome.runtime.sendMessage({ type: 'blockCount', count: pendingBlockCount });
-      chrome.runtime.sendMessage({ type: 'recordSiteBlock', count: pendingBlockCount });
+      _b.runtime.sendMessage({ type: MSG.BLOCK_COUNT, count: pendingBlockCount });
+      _b.runtime.sendMessage({ type: MSG.RECORD_SITE_BLOCK, count: pendingBlockCount });
       pendingBlockCount = 0;
     }
     blockReportTimer = null;
@@ -714,13 +960,38 @@
   }
 
   function removeAdElements() {
-    const selectors = ['ins.adsbygoogle', 'amp-ad', 'google-ad', '.ad-panel', 'iframe[src*="doubleclick.net"]', 'iframe[src*="googlesyndication.com"]'];
+    const selectors = [
+      'ins.adsbygoogle', 'amp-ad', 'google-ad', '.ad-panel',
+      'iframe[src*="doubleclick.net"]', 'iframe[src*="googlesyndication.com"]',
+      '[data-element="barcode"]', '[data-element="campaign"]',
+      '[data-izone*="uc-area"]', '[data-element="branding"]',
+      'div[id^="taboola-"]',
+      'div[id*="taboola"]',
+      'div[class*="taboola"]',
+      'div[class*="trc_"]',
+      '.trc_related_container',
+      '.trc_rbox_div',
+      'div[data-type="rbox"]',
+      'div[data-placement*="Taboola"]',
+      '.videocube-unit',
+      'div[id^="taboola-"]:empty',
+      'div[class*="video-rec"]',
+      'div[class*="rec-item"]',
+      'div[class*="organic-rec"]',
+      'div[class*="suggestions"]',
+      'div[class*="native-rec"]',
+    ];
     let count = 0;
-    const elements = document.querySelectorAll(selectors.join(','));
-    for (const el of elements) { el.style.setProperty('display', 'none', 'important'); count++; }
+    for (const sel of selectors) {
+      if (removeAdElements._injected.has(sel)) continue;
+      removeAdElements._injected.add(sel);
+      injectStyleDeep(sel + '{display:none!important}');
+    }
+    count = document.querySelectorAll(selectors.join(',')).length;
     if (count > 0) { queueBlockCount(count); removeAdPlaceholders(); }
     bypassAntiAdblock();
   }
+  removeAdElements._injected = new Set();
 
   function isSafeElement(el) {
     const role = el.getAttribute('role');
@@ -731,18 +1002,21 @@
 
   function removeAdPlaceholders() {
     const skipHosts = ['mail.google.com', 'outlook.live.com', 'outlook.office.com', 'mail.yahoo.com', 'keep.google.com', 'coinmarketcap.com', 'bitget.com', 'coingecko.com', 'tvsmotor.com'];
-    const host = window.location.hostname;
-    if (skipHosts.some(h => host.includes(h))) return;
-    if (host.endsWith('.google.com') || host === 'google.com') return;
     const now = Date.now();
     if (removeAdPlaceholders._lastRun && now - removeAdPlaceholders._lastRun < 2000) return;
     removeAdPlaceholders._lastRun = now;
     const adContainerPatterns = [
-      'div[class*="ad"]', 'div[id*="ad"]',
-      'ins[class*="ad"]',
-      'section[class*="ad"]', 'section[id*="ad"]',
+      'div[class*="-ad-"]', 'div[class*=" advert"]', 'div[class*="ad-"]', 'div[class*="-ad"]', 'div[class*=" sponsor"]', 'div[class*=" banner"]', 'div[class*=" promo"]', 'div[class*="ads-"]', 'div[class*="-ads"]',
+      'div[id*="-ad-"]', 'div[id*="ad-"]', 'div[id*=" sponsor"]', 'div[id*=" banner"]', 'div[id*=" promo"]', 'div[id*="ads-"]', 'div[id*="-ads"]',
+      'ins[class*="-ad-"]', 'ins[class*="ad-"]', 'ins[class*="-ad"]',
+      'section[class*="-ad-"]', 'section[class*="ad-"]', 'section[class*="-ad"]', 'section[class*=" advert"]', 'section[class*=" sponsor"]', 'section[class*=" banner"]',
+      'section[id*="-ad-"]', 'section[id*="ad-"]', 'section[id*=" sponsor"]', 'section[id*=" banner"]',
+      'div[id*="div-gpt-ad"]', 'div[id*="google_ads_iframe"]', 'div[id*="google_adsense"]',
+      'div[class*="adslot"]', 'div[class*="ad-wrapper"]', 'div[class*="ad-container"]', 'div[class*="ad-unit"]', 'div[class*="adplacement"]', 'div[class*="ad_box"]', 'div[class*="advt"]', 'div[class*="advertise"]',
+      'div[data-ad-]', 'div[data-adunit]', 'div[data-google-query-id]',
+      'aside[class*="ad-"]', 'aside[id*="ad-"]',
     ];
-    const adKeyword = /(^|[\s_-])(a[dds][-\s_]|advert|sponsor|banner|promo)/i;
+    const adKeyword = /(^|[\s_-])(a[dds][-\s_]|advert|sponsor|banner|promo|advt|adsl|adunit|adslot|adwrap)/i;
     for (const pat of adContainerPatterns) {
       const els = document.querySelectorAll(pat);
       for (const el of els) {
@@ -751,15 +1025,21 @@
         if (isSafeElement(el)) continue;
         if (el.querySelector('input, textarea, [role="checkbox"], [role="button"], [role="textbox"], [role="switch"], [role="radio"]')) continue;
         const cls = (el.className || '') + ' ' + (el.id || '');
-        if (!adKeyword.test(cls)) continue;
+        if (!/div-gpt-ad|google_ads_iframe/.test(el.id)) {
+          if (!adKeyword.test(cls)) continue;
+        }
         const rect = el.getBoundingClientRect();
         if (rect.width < 30 || rect.height < 30) continue;
         const text = (el.textContent || '').trim();
-        if (text.length >= 50) continue;
+        if (text.length >= 200) continue;
         const imgs = el.querySelectorAll('img');
         const hasBigImage = Array.from(imgs).some(img => img.naturalWidth > 50 || img.offsetWidth > 50);
         const iframes = el.querySelectorAll('iframe');
-        const hasFilledIframe = Array.from(iframes).some(f => f.offsetWidth > 50 && f.offsetHeight > 50);
+        const hasFilledIframe = Array.from(iframes).some(f => {
+          const src = (f.src || '').toLowerCase();
+          if (!src || src === 'about:blank' || /doubleclick\.net|googlesyndication\.com|googleadservices\.com|amazon-adsystem\.com/.test(src)) return false;
+          return f.offsetWidth > 50 && f.offsetHeight > 50;
+        });
         const canvases = el.querySelectorAll('canvas');
         const hasCanvas = Array.from(canvases).some(c => c.offsetWidth > 50 && c.offsetHeight > 50);
         const svgs = el.querySelectorAll('svg');
@@ -769,10 +1049,128 @@
         }
       }
     }
+    /* Second pass: collapse ad-iframes' immediate ad-looking parent containers */
+    var adIframes = document.querySelectorAll('iframe[src*="doubleclick.net"], iframe[src*="googlesyndication.com"], iframe[src*="googleadservices.com"], iframe[src*="amazon-adsystem.com"]');
+    for (var fi = 0; fi < adIframes.length; fi++) {
+      var adIframe = adIframes[fi];
+      if (adIframe.offsetParent === null) continue;
+      var parent = adIframe.parentElement;
+      var maxWalk = 0;
+      while (parent && parent !== document.body && parent !== document.documentElement && maxWalk < 3) {
+        var cls = (parent.className || '') + ' ' + (parent.id || '');
+        if (adKeyword.test(cls) || /div-gpt-ad|google_ads_iframe/.test(cls)) {
+          if (parent.offsetParent !== null && !parent.classList.contains('ds-hidden')) {
+            collapseElement(parent);
+          }
+          break;
+        }
+        parent = parent.parentElement;
+        maxWalk++;
+      }
+    }
+    /* Third pass: collapse any visible GPT slot that has been on page >5s with no real content */
+    var gptSlots = document.querySelectorAll('div[id^="div-gpt-ad"], div[id^="google_ads_iframe"]');
+    var gptThreshold = Date.now() - 5000;
+    for (var gi = 0; gi < gptSlots.length; gi++) {
+      var slot = gptSlots[gi];
+      if (slot.offsetParent === null || slot.classList.contains('ds-hidden')) continue;
+      var slotAge = slot._gptCreated || Date.now();
+      if (!slot._gptCreated) { slot._gptCreated = Date.now(); continue; }
+      if (slotAge < gptThreshold) continue;  // only collapse slots sitting >5s
+      /* Check if slot has real content (non-ad iframe, big image, canvas, svg) */
+      var iframes = slot.querySelectorAll('iframe');
+      var hasRealIframe = Array.from(iframes).some(function(f) {
+        var s = (f.src || '').toLowerCase();
+        if (!s || s === 'about:blank' || /doubleclick\.net|googlesyndication\.com|googleadservices\.com|amazon-adsystem\.com/.test(s)) return false;
+        return f.offsetWidth > 50 && f.offsetHeight > 50;
+      });
+      var imgs = slot.querySelectorAll('img');
+      var hasBigImage = Array.from(imgs).some(function(img) { return img.naturalWidth > 50 || img.offsetWidth > 50; });
+      if (!hasRealIframe && !hasBigImage) collapseElement(slot);
+    }
+    /* Fourth pass: collapse Taboola/Outbrain containers that are now empty wrappers */
+    var nativeAdWrappers = document.querySelectorAll(
+      'div[id^="taboola-"], div[id*="taboola"], div[class*="trc_rbox"], ' +
+      'div[data-type="rbox"], div[class*="OUTBRAIN"], div[id^="outbrain_widget"]'
+    );
+    for (var ti = 0; ti < nativeAdWrappers.length; ti++) {
+      var tw = nativeAdWrappers[ti];
+      if (tw.offsetParent === null || tw.classList.contains('ds-hidden')) continue;
+      var twIframes = tw.querySelectorAll('iframe');
+      var hasOnlyAdIframes = twIframes.length > 0 && Array.from(twIframes).every(function(f) {
+        var s = (f.src || '').toLowerCase();
+        return !s || s === 'about:blank' || s.includes('taboola') || s.includes('outbrain');
+      });
+      var isEmpty = tw.textContent.trim().length < 10 && !tw.querySelector('img[src]:not([src=""])');
+      if (hasOnlyAdIframes || isEmpty) collapseElement(tw);
+    }
+    collapseGhostWrappers();
   }
 
   function collapseElement(el) {
+    /* display:none removes element from all layout flows including flex/grid */
     el.style.setProperty('display', 'none', 'important');
+    el.classList.add('ds-hidden');
+    queueBlockCount(1);
+    el.style.setProperty('height', '0', 'important');
+    el.style.setProperty('min-height', '0', 'important');
+    el.style.setProperty('max-height', '0', 'important');
+    el.style.setProperty('width', '0', 'important');
+    el.style.setProperty('min-width', '0', 'important');
+    el.style.setProperty('margin', '0', 'important');
+    el.style.setProperty('padding', '0', 'important');
+    el.style.setProperty('overflow', 'hidden', 'important');
+    /* Walk up to 4 levels, collapsing wrappers that now have all-hidden children */
+    try {
+      var current = el.parentElement;
+      for (var _i = 0; _i < 4 && current && current !== document.body && current !== document.documentElement; _i++) {
+        var allHidden = Array.from(current.children).every(function(c) {
+          if (c.tagName === 'SCRIPT' || c.tagName === 'NOSCRIPT' || c.tagName === 'STYLE' || c.tagName === 'LINK' || c.tagName === 'META') return true;
+          return c.style.display === 'none' || c.classList.contains('ds-hidden') || c.offsetParent === null;
+        });
+        if (!allHidden) break;
+        current.style.setProperty('display', 'none', 'important');
+        current.style.setProperty('min-height', '0', 'important');
+        current.style.setProperty('height', '0', 'important');
+        current.style.setProperty('padding', '0', 'important');
+        current.style.setProperty('margin', '0', 'important');
+        current = current.parentElement;
+      }
+    } catch (_e) {}
+  }
+
+  function collapseGhostWrappers() {
+    /* Fifth pass: find any visible element with ad-like classes/IDs that only contains
+       hidden children, and collapse it too — catches wrappers with min-height */
+    var ghostSelectors = 'div[class*="ad-"],div[id*="ad-"],div[class*="-ad"],div[id*="-ad"],' +
+      'div[class*="gpt"],div[id*="gpt"],div[class*="google_ads"],div[id*="google_ads"],' +
+      'div[class*="banner"],div[id*="banner"],div[class*="sponsor"],div[id*="sponsor"]';
+    var ghostCandidates = document.querySelectorAll(ghostSelectors);
+    for (var gi = 0; gi < ghostCandidates.length; gi++) {
+      var g = ghostCandidates[gi];
+      if (g.offsetParent === null || g.classList.contains('ds-hidden')) continue;
+      /* Check all layout-contributing children are hidden */
+      var kids = Array.from(g.children);
+      var allKidsHidden = kids.every(function(k) {
+        if (k.tagName === 'SCRIPT' || k.tagName === 'NOSCRIPT' || k.tagName === 'STYLE' || k.tagName === 'LINK' || k.tagName === 'META') return true;
+        return k.style.display === 'none' || k.classList.contains('ds-hidden') || k.offsetParent === null;
+      });
+      /* Also check text-content length — if very little text, it's likely just ad wiring */
+      var textLen = (g.textContent || '').trim().length;
+      if (allKidsHidden && textLen < 50) collapseElement(g);
+    }
+  }
+
+  function removeSpacerDivs() {
+    var spacerSelectors = 'div[class*="spacer"],div[id*="spacer"],div[class*="placeholder-ad"],div[class*="ad-placeholder"]';
+    var spacers = document.querySelectorAll(spacerSelectors);
+    for (var si = 0; si < spacers.length; si++) {
+      var s = spacers[si];
+      if (s.offsetParent === null || s.classList.contains('ds-hidden') || s.querySelector('img, iframe, canvas, video')) continue;
+      var sText = (s.textContent || '').trim();
+      if (sText.length > 100) continue;
+      collapseElement(s);
+    }
   }
 
   function bypassAntiAdblock() {
@@ -797,34 +1195,42 @@
       '.adsbygoogle[data-ad-status="unfilled"]',
       '.ad-overlay', '#ad-overlay',
     ];
+    var scarewareFound = false;
     for (const sel of antiAdblockSelectors) {
       const els = document.querySelectorAll(sel);
       for (const el of els) {
         if (el.offsetParent === null) continue;
         const text = (el.textContent || '').toLowerCase();
-        if (text.includes('disable') || text.includes('adblock') || text.includes('whitelist') ||
-            text.includes('ad blocker') || text.includes('turn off') || text.includes('please')) {
-          el.style.setProperty('display', 'none', 'important');
+        /* Require BOTH structural selector AND matching text — not just one keyword */
+        const hasAdblockText = text.includes('adblock') || text.includes('ad blocker') || text.includes('disable adblock') ||
+          text.includes('turn off adblock') || text.includes('disable ad blocker');
+        const hasWhitelistText = text.includes('whitelist');
+        if (hasAdblockText || (hasWhitelistText && /* whitelist alone is weak signal, require selector match */
+            antiAdblockSelectors.some(function(s) { try { return el.matches(s); } catch { return false; } }))) {
+          el.classList.add('ds-hidden');
+          scarewareFound = true;
           queueBlockCount(1);
         }
       }
     }
     const body = document.body;
-    if (body) {
-      if (body.style.overflow === 'hidden') body.style.overflow = '';
-      if (body.style.position === 'fixed') body.style.position = '';
-    }
     const html = document.documentElement;
-    if (html) {
-      if (html.style.overflow === 'hidden') html.style.overflow = '';
+    if (scarewareFound) {
+      if (body) {
+        if (body.style.overflow === 'hidden' || getComputedStyle(body).overflow === 'hidden') body.style.setProperty('overflow', 'auto', 'important');
+        if (body.style.position === 'fixed' || getComputedStyle(body).position === 'fixed') body.style.setProperty('position', 'static', 'important');
+      }
+      if (html) {
+        if (html.style.overflow === 'hidden' || getComputedStyle(html).overflow === 'hidden') html.style.setProperty('overflow', 'auto', 'important');
+      }
     }
     const locks = document.querySelectorAll('[style*="overflow: hidden"], [style*="overflow:hidden"]');
     for (const el of locks) {
       if (el === body || el === html) continue;
       if (el.offsetParent === null) continue;
       const text = (el.textContent || '').toLowerCase();
-      if (text.includes('adblock') || text.includes('disable') || text.includes('whitelist')) {
-        el.style.overflow = '';
+      if (text.includes('adblock') || text.includes('disable adblock') || text.includes('whitelist')) {
+        el.style.setProperty('overflow', 'auto', 'important');
       }
     }
   }
@@ -838,7 +1244,7 @@
     for (const script of scripts) {
       const src = (script.src || '').toLowerCase();
       const text = (script.textContent || '').toLowerCase();
-      for (const p of patterns) { if (src.includes(p) || text.includes(p)) { script.remove(); queueBlockCount(1); chrome.runtime.sendMessage({ type: 'malwareDetected' }); return true; } }
+      for (const p of patterns) { if (src.includes(p) || text.includes(p)) { script.remove(); queueBlockCount(1); _b.runtime.sendMessage({ type: MSG.MALWARE_DETECTED }); return true; } }
     }
     return false;
   }
@@ -846,9 +1252,11 @@
   function detectFakeLoginForms() {
     const forms = document.querySelectorAll('form');
     const currentHost = window.location.hostname;
+    const ssoDomains = ['auth0.com', 'okta.com', 'oktacdn.com', 'onelogin.com', 'login.microsoftonline.com', 'login.live.com', 'login.salesforce.com', 'accounts.google.com', 'accounts.youtube.com', 'accounts.facebook.com', 'appleid.apple.com', 'signin.aws.amazon.com', 'idp.'];
     for (const form of forms) {
       const action = (form.action || '').toLowerCase();
       if (action && !action.includes(currentHost)) {
+        if (ssoDomains.some(d => action.includes(d))) continue;
         const pw = form.querySelectorAll('input[type="password"]');
         if (pw.length > 0) {
           const w = document.createElement('div');
@@ -856,7 +1264,7 @@
           w.textContent = 'DurgaShield Warning: This form submits to a different domain. Login credentials could be stolen!';
           document.body.prepend(w);
           setTimeout(() => w.remove(), 10000);
-          chrome.runtime.sendMessage({ type: 'malwareDetected' });
+          _b.runtime.sendMessage({ type: MSG.MALWARE_DETECTED });
           return true;
         }
       }
@@ -891,13 +1299,21 @@
 
   function blockYouTubeAds() {
     const adSelectors = ['ytd-ad-slot-renderer', 'ytd-display-ad-renderer', 'ytd-promoted-video-renderer', 'ytd-promoted-sparkles-web-renderer', 'ytd-compact-promoted-video-renderer', 'ytd-compact-ad-renderer', 'ytd-banner-promo-renderer', 'ytd-mealbar-promo-renderer', 'ytd-video-masthead-ad', 'ytd-rich-item-ad-renderer', 'ytd-in-feed-ad-layout-renderer', '#masthead-ad', '#merch-shelf', '#player-ads > .ytd-ad-slot-renderer'];
-    let count = 0;
-    for (const sel of adSelectors) { const els = document.querySelectorAll(sel); for (const el of els) { el.remove(); count++; } }
-    const overlayAds = document.querySelectorAll('.ytp-ad-module, .ytp-ad-player-overlay, .ytp-ad-text-overlay, .ytp-ad-image-overlay');
-    for (const ad of overlayAds) { if (ad.offsetParent !== null) { ad.remove(); count++; } }
+    const overlaySelectors = '.ytp-ad-module, .ytp-ad-player-overlay, .ytp-ad-text-overlay, .ytp-ad-image-overlay';
+    for (const sel of adSelectors) {
+      if (blockYouTubeAds._injected.has(sel)) continue;
+      blockYouTubeAds._injected.add(sel);
+      injectDSStyle(sel + '{display:none!important}');
+    }
+    if (!blockYouTubeAds._injected.has(overlaySelectors)) {
+      blockYouTubeAds._injected.add(overlaySelectors);
+      injectDSStyle(overlaySelectors + '{display:none!important}');
+    }
+    let count = document.querySelectorAll(adSelectors.concat(['.ytp-ad-module', '.ytp-ad-player-overlay', '.ytp-ad-text-overlay', '.ytp-ad-image-overlay']).join(',')).length;
     if (count > 0) { queueBlockCount(count); removeAdPlaceholders(); }
     cleanYouTubeAnnoyances();
   }
+  blockYouTubeAds._injected = new Set();
 
   function cleanYouTubeAnnoyances() {
     const annoyances = [
@@ -921,10 +1337,12 @@
       'ytd-stickershelf-renderer'
     ];
     for (const sel of annoyances) {
-      const els = document.querySelectorAll(sel);
-      for (const el of els) { el.remove(); }
+      if (cleanYouTubeAnnoyances._injected.has(sel)) continue;
+      cleanYouTubeAnnoyances._injected.add(sel);
+      injectDSStyle(sel + '{display:none!important}');
     }
   }
+  cleanYouTubeAnnoyances._injected = new Set();
 
   function skipVideoAd() {
     const video = document.querySelector('video');
@@ -956,26 +1374,45 @@
     let isSubFrame;
     try { isSubFrame = window.self !== window.top; } catch (e) { isSubFrame = true; }
     const isAmazon = host.includes('amazon.') || host.includes('payments.');
+    const isAdminPanel = host.includes('web-hosting.com') || host.includes('cpanel') || host.includes('whm') || /cpsess\d+/.test(window.location.pathname);
     let timer = null;
-    const observer = new MutationObserver(() => {
+    let pendingMutations = [];
+    const throttle = {};
+    function runThrottled(name, minGap, fn) {
+      const now = Date.now();
+      if (throttle[name] && now - throttle[name] < minGap) return;
+      throttle[name] = now;
+      fn();
+    }
+    const observer = new MutationObserver((mutations) => {
+      pendingMutations.push(...mutations);
       if (timer) return;
       timer = setTimeout(() => {
         timer = null;
+        let addedCount = 0;
+        for (const m of pendingMutations) addedCount += m.addedNodes.length;
+        pendingMutations = [];
+        if (siteDisabled) return;
         if (isGoogle || isAmazon || isCryptoSite()) return;
-        if (config.ads && !isYouTube() && !isCryptoSite()) { removeAdElements(); bypassAntiAdblock(); }
-        if (config.ads && !isYouTube() && !isSubFrame) removeAdPlaceholders();
-        if (config.ads) { blockTwitchAds(); blockGmailAds(); removeSocialFeedAds(); blockStreamingAds(); }
-        if (config.crypto && !isCryptoSite() && !isSubFrame) detectCryptoMining();
-        if (config.containerIsolation && !isFacebookOrigin()) blockFacebookEmbeds();
-        if (config.neverConsent !== false && !isSubFrame) handleCookieConsent();
-        if (config.enhancedTracking === true && !isSubFrame) removeTrackingStorage();
+        if (addedCount < 5) {
+          if (config.xssProtection === true) { monitorXssMutations(); }
+        runThrottled('placeholders', 2000, () => { if (config.ads && !isSubFrame) removeAdPlaceholders(); });
+        runThrottled('spacers', 3000, () => { if (config.ads && !isSubFrame) removeSpacerDivs(); });
+          return;
+        }
+        runThrottled('ads', 300, () => { if (config.ads && !isYouTube() && !isCryptoSite()) { removeAdElements(); bypassAntiAdblock(); }});
+        runThrottled('placeholders', 2000, () => { if (config.ads && !isSubFrame) removeAdPlaceholders(); });
+        runThrottled('streamAds', 1000, () => { if (config.ads) { blockTwitchAds(); blockGmailAds(); removeSocialFeedAds(); blockStreamingAds(); }});
+        runThrottled('annoyances', 500, () => { if (config.neverConsent !== false && !isSubFrame) { hideAnnoyanceElements(); handleCookieConsent(); }});
+        if (config.ads && window.location.hostname.includes('facebook.com') && !isSubFrame) runThrottled('fbAds', 500, facebookScanAndRemove);
+        runThrottled('tracking', 1000, () => { if (config.enhancedTracking === true && !isSubFrame) removeTrackingStorage(); });
         if (config.xssProtection === true) { monitorXssMutations(); }
-        if (config.clearClick === true && !isCryptoSite() && !isSubFrame) { scanSuspiciousOverlays(); }
-        if (config.abe !== false) { checkLocalNetworkContent(); }
-        if (window.location.protocol === 'https:' && !isSubFrame) detectMixedContent();
-        if (config.phishingLinkDetect === true && !isSubFrame) detectPhishingLinks();
-        if (config.fbPrivacy === true && !isSubFrame) applyFBPrivacy();
-      }, 100);
+        runThrottled('clearClick', 500, () => { if (config.clearClick === true && !isCryptoSite() && !isSubFrame) { scanSuspiciousOverlays(); }});
+        runThrottled('abe', 500, () => { if (config.abe !== false) { checkLocalNetworkContent(); }});
+        runThrottled('mixed', 1000, () => { if (window.location.protocol === 'https:' && !isSubFrame) detectMixedContent(); });
+        runThrottled('phish', 2000, () => { if (config.phishingLinkDetect === true && !isSubFrame) detectPhishingLinks(); });
+        runThrottled('fbPrivacy', 2000, () => { if (config.fbPrivacy === true && !isSubFrame) applyFBPrivacy(); });
+      }, 200);
     });
     observer.observe(target, { childList: true, subtree: true });
   }
@@ -1008,7 +1445,7 @@
 
   function checkYouTubeWhitelist() {
     if (!isYouTube() || !ytChannelId) return;
-    chrome.storage.local.get('durgashield_youtube_whitelist', function(r) {
+    _b.storage.local.get('durgashield_youtube_whitelist', function(r) {
       var list = r.durgashield_youtube_whitelist || [];
       ytWhitelisted = list.some(function(c) { return c.id === ytChannelId; });
       if (ytWhitelisted) {
@@ -1025,7 +1462,7 @@
         banner.appendChild(undoBtn);
         document.body.appendChild(banner);
         document.getElementById('ds-yt-unwhitelist').onclick = function() {
-          chrome.runtime.sendMessage({ type:'removeYouTubeWhitelist', channelId: ytChannelId });
+          _b.runtime.sendMessage({ type:'removeYouTubeWhitelist', channelId: ytChannelId });
           banner.remove();
           ytWhitelisted = false;
         };
@@ -1034,12 +1471,31 @@
   }
 
   function startYouTubeAdSkip() {
-    setInterval(function() {
-      if (!config.ads || !isYouTube() || ytWhitelisted) return;
+    let lastYTUrl = '';
+    let lastCheck = 0;
+    function checkYT() {
+      if (!isYouTube()) return;
+      const now = Date.now();
+      if (now - lastCheck < 400) return;
+      lastCheck = now;
+      if (window.location.href !== lastYTUrl) {
+        lastYTUrl = window.location.href;
+        detectYouTubeChannel();
+        checkYouTubeWhitelist();
+        lastCheck = 0;
+        setTimeout(checkYT, 100);
+        return;
+      }
+      if (!config.ads || ytWhitelisted) return;
       blockYouTubeAds();
       skipVideoAd();
       skipEndScreenCards();
-    }, 800);
+    }
+    setInterval(checkYT, 400);
+    window.addEventListener('popstate', function() {
+      lastYTUrl = '';
+      lastCheck = 0;
+    });
   }
 
   /* ---------- Privacy Badger Features ---------- */
@@ -1102,12 +1558,13 @@
       } catch (e) {}
     });
     if (thirdParties.size > 0) {
-      chrome.runtime.sendMessage({ type: 'reportThirdParties', domains: Array.from(thirdParties) });
+      _b.runtime.sendMessage({ type: MSG.REPORT_THIRD_PARTIES, domains: Array.from(thirdParties) });
     }
   }
 
   function initPrivacyFeatures() {
     if (_isAmazonPayment) return;
+    if (isAdminPanel()) return;
     removeLinkTracking();
     replaceSocialWidgets();
     if (!isFacebookOrigin() && !isYouTube()) scanThirdParties();
@@ -1119,9 +1576,8 @@
     initClearClick();
     initABE();
     enhancedUrlCleaning();
-    audioFingerprintProtection();
-    webglFingerprintProtection();
-    domRectProtection();
+    initFingerprintingProtection();
+    initHeuristicDetection();
     historyProtection();
     permissionMonitor();
     detectMixedContent();
@@ -1145,19 +1601,16 @@
   function initAnnoyanceFilter() {
     if (config.neverConsent === false) return;
     hideAnnoyanceElements();
-    const obs = new MutationObserver(() => hideAnnoyanceElements());
-    obs.observe(document.documentElement, { childList: true, subtree: true });
   }
 
   function hideAnnoyanceElements() {
-    if (document.hidden) return;
+    if (siteDisabled || document.hidden) return;
     for (const sel of ANNOYANCE_SELECTORS) {
       const els = document.querySelectorAll(sel);
       for (const el of els) {
         if (el.offsetParent !== null && !el.dataset._sfAnnoyance) {
           el.dataset._sfAnnoyance = '1';
-          el.style.display = 'none';
-          el.style.visibility = 'hidden';
+          el.classList.add('ds-hidden');
           el.setAttribute('aria-hidden', 'true');
           queueBlockCount(1);
         }
@@ -1173,7 +1626,7 @@
     if (stealthInitialized) return;
     if (!config.stealth) return;
     stealthInitialized = true;
-    chrome.storage.local.get('durgashield_stealth', (r) => {
+    _b.storage.local.get('durgashield_stealth', (r) => {
       const saved = r.durgashield_stealth || {};
       Object.assign(stealthConfig, saved);
       applyStealth();
@@ -1187,11 +1640,25 @@
   }
 
   function blockWebRTC() {
-    if (window.RTCPeerConnection) {
-      const orig = window.RTCPeerConnection;
-      window.RTCPeerConnection = function() { return { close: function() {}, createDataChannel: function() { return {}; }, createOffer: function() { return { then: function() {} }; }, setLocalDescription: function() {} }; };
-      window.RTCPeerConnection.prototype = orig.prototype;
-    }
+    injectMainWorldCode(`
+      (function() {
+        if (!window.RTCPeerConnection) return;
+        var orig = window.RTCPeerConnection;
+        window.RTCPeerConnection = function() {
+          var pc = new (Function.prototype.bind.apply(orig, [null].concat(Array.prototype.slice.call(arguments))));
+          pc.addEventListener('icecandidate', function(e) {
+            if (e.candidate && e.candidate.candidate) {
+              var privates = /(?:192\\.168\\.\\d{1,3}\\.\\d{1,3}|10\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}|172\\.(?:1[6-9]|2\\d|3[01])\\.\\d{1,3}\\.\\d{1,3})/;
+              if (privates.test(e.candidate.candidate)) {
+                pc.dispatchEvent(new RTCPeerConnectionIceEvent('icecandidate', { candidate: null }));
+              }
+            }
+          });
+          return pc;
+        };
+        window.RTCPeerConnection.prototype = orig.prototype;
+      })();
+    `);
   }
 
   function hideReferrer() {
@@ -1204,6 +1671,7 @@
   }
 
   function antiFingerprinting() {
+    if (HTMLCanvasElement.prototype._dgsPatched) return;
     try {
       Object.defineProperty(navigator, 'webdriver', { get: () => undefined, configurable: false });
     } catch (e) {}
@@ -1240,6 +1708,7 @@
         if (args[0]) args[0].call(canvas, blob);
       }, args[1], args[2]);
     };
+    HTMLCanvasElement.prototype._dgsPatched = true;
   }
 
   /* ---------- Ghostery-inspired: Never-Consent ---------- */
@@ -1288,7 +1757,69 @@
     'Reject all cookies', 'Reject All Cookies',
     'Decline all cookies', 'Decline All Cookies',
     'Reject non-essential', 'Reject Non-Essential',
-    'Only allow required', 'Required only'
+    'Only allow required', 'Required only',
+    /* Spanish */
+    'Rechazar', 'Rechazar todo', 'Rechazar todos', 'Rechazar todas',
+    'No aceptar', 'No aceptar cookies', 'Solo necesarias',
+    'Solo necesarias cookies', 'Configuraci\u00f3n', 'Preferencias',
+    /* French */
+    'Refuser', 'Refuser tout', 'Tout refuser', 'Refuser tous',
+    'Accepter uniquement n\u00e9cessaires', 'Uniquement n\u00e9cessaires',
+    'Continuer sans accepter', 'Param\u00e8tres', 'G\u00e9rer',
+    /* German */
+    'Ablehnen', 'Alle ablehnen', 'Alles ablehnen',
+    'Nur notwendige', 'Nur notwendige Cookies', 'Notwendige nur',
+    'Einstellungen', 'Cookie-Einstellungen', 'Pr\u00e4ferenzen',
+    'Nur erforderliche', 'Nur erforderliche Cookies',
+    /* Italian */
+    'Rifiuta', 'Rifiuta tutto', 'Rifiuta tutti', 'Rifiuta tutte',
+    'Solo necessari', 'Solo necessari cookies', 'Solo necessarie',
+    'Continua senza accettare', 'Impostazioni', 'Preferenze',
+    /* Portuguese */
+    'Recusar', 'Recusar tudo', 'Recusar todos', 'Recusar todas',
+    'Apenas necess\u00e1rios', 'Apenas necess\u00e1rias',
+    'Continuar sem aceitar', 'Configura\u00e7\u00f5es', 'Prefer\u00eancias',
+    /* Dutch */
+    'Weigeren', 'Alles weigeren', 'Alleen noodzakelijke',
+    'Alleen noodzakelijke cookies', 'Instellingen', 'Voorkeuren',
+    'Niet accepteren', 'Sla over',
+    /* Polish */
+    'Odrzu\u0107', 'Odrzu\u0107 wszystkie', 'Odrzu\u0107 wszystko',
+    'Tylko niezb\u0119dne', 'Tylko niezb\u0119dne cookies',
+    'Ustawienia', 'Preferencje',
+    /* Russian */
+    '\u041e\u0442\u043a\u043b\u043e\u043d\u0438\u0442\u044c', '\u041e\u0442\u043a\u043b\u043e\u043d\u0438\u0442\u044c \u0432\u0441\u0435', '\u0422\u043e\u043b\u044c\u043a\u043e \u043d\u0435\u043e\u0431\u0445\u043e\u0434\u0438\u043c\u044b\u0435',
+    '\u041d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438', '\u041f\u0440\u0435\u0434\u043f\u043e\u0447\u0442\u0435\u043d\u0438\u044f', '\u041d\u0435 \u043f\u0440\u0438\u043d\u0438\u043c\u0430\u0442\u044c',
+    /* Swedish */
+    'Avvisa', 'Avvisa alla', 'Endast n\u00f6dv\u00e4ndiga',
+    'N\u00f6dv\u00e4ndiga endast', 'Inst\u00e4llningar', 'Preferenser',
+    /* Danish / Norwegian */
+    'Afvis', 'Afvis alle', 'Kun n\u00f8dvendige',
+    'Avvis', 'Avvis alle', 'Bare n\u00f8dvendige',
+    /* Finnish */
+    'Hylk\u00e4\u00e4', 'Hylk\u00e4\u00e4 kaikki', 'Vain v\u00e4ltt\u00e4m\u00e4tt\u00f6m\u00e4t',
+    'Asetukset', 'Mieltymykset',
+    /* Czech */
+    'Odm\u00edtnout', 'Odm\u00edtnout v\u0161e', 'Pouze nezbytn\u00e9',
+    'Nastaven\u00ed', 'P\u0159edvolby',
+    /* Hungarian */
+    'Elutas\u00edt\u00e1s', 'Mindet elutas\u00edt', 'Minden elutas\u00edt\u00e1sa',
+    'Csak a sz\u00fcks\u00e9gesek', 'Be\u00e1ll\u00edt\u00e1sok',
+    /* Turkish */
+    'Reddet', 'T\u00fcm\u00fcn\u00fc reddet', 'Sadece gerekli',
+    'Ayarlar', 'Tercihler',
+    /* Romanian */
+    'Refuz\u0103', 'Refuz\u0103 tot', 'Respinge',
+    'Doar necesare', 'Doar cookie-urile necesare',
+    'Set\u0103ri', 'Preferin\u021be',
+    /* Other */
+    'Necesar', 'Necessaire', 'Necessario', 'Necessari',
+    'Rifiutare', 'Rifiutare tutto',
+    'Nur das N\u00f6tigste', 'Nur N\u00f6tigste',
+    'Weiter ohne Zustimmung', 'Ohne Zustimmung fortfahren',
+    'Gestionar', 'G\u00e9rer', 'Gestionar',
+    'Continuer sans', 'Continuer sans accepter',
+    'Continua senza', 'Continua senza accettare'
   ];
 
   const ACCEPT_BUTTON_PATTERNS = [
@@ -1299,7 +1830,46 @@
     'Agree', 'Agree all', 'Agree All',
     'Continue', 'Continue to site',
     'Close', 'close',
-    '\u2713', '\u2714'
+    '\u2713', '\u2714',
+    /* Spanish */
+    'Aceptar todo', 'Aceptar todos', 'Aceptar todas', 'Aceptar',
+    'Permitir todo', 'Permitir', 'De acuerdo', 'Entendido',
+    /* French */
+    'Accepter tout', 'Tout accepter', 'Accepter tous', 'Accepter',
+    'J\u2019accepte', "D'accord", "J'ai compris",
+    /* German */
+    'Alle akzeptieren', 'Akzeptieren', 'Zustimmen', 'OK',
+    'Alle Cookies akzeptieren', 'Cookies akzeptieren', 'Einverstanden',
+    /* Italian */
+    'Accetta tutto', 'Accetta tutti', 'Accetta tutte', 'Accetta',
+    'Consenti tutto', 'Consenti', 'OK',
+    /* Portuguese */
+    'Aceitar tudo', 'Aceitar todos', 'Aceitar todas', 'Aceitar',
+    'Permitir tudo', 'Permitir', 'OK',
+    /* Dutch */
+    'Alles accepteren', 'Accepteren', 'Akkoord', 'OK',
+    'Alle cookies accepteren', 'Cookies accepteren',
+    /* Polish */
+    'Akceptuj wszystko', 'Akceptuj wszystkie', 'Akceptuj',
+    'Zgadzam si\u0119', 'Zgoda', 'OK',
+    /* Russian */
+    '\u041f\u0440\u0438\u043d\u044f\u0442\u044c \u0432\u0441\u0435', '\u041f\u0440\u0438\u043d\u044f\u0442\u044c', '\u0421\u043e\u0433\u043b\u0430\u0441\u0438\u0442\u044c\u0441\u044f',
+    '\u0420\u0430\u0437\u0440\u0435\u0448\u0438\u0442\u044c', '\u0420\u0430\u0437\u0440\u0435\u0448\u0438\u0442\u044c \u0432\u0441\u0435', 'OK',
+    /* Swedish */
+    'Acceptera alla', 'Acceptera', 'Godk\u00e4nn', 'OK',
+    /* Danish / Norwegian */
+    'Accepter alle', 'Accepter alt', 'Accepter', 'Godkend', 'OK',
+    'Godta alle', 'Godta alt', 'Godta',
+    /* Finnish */
+    'Hyv\u00e4ksy kaikki', 'Hyv\u00e4ksy', 'OK', 'Salli',
+    /* Czech */
+    'P\u0159ijmout v\u0161e', 'P\u0159ijmout', 'Souhlas\u00edm', 'OK',
+    /* Hungarian */
+    '\u00d6sszes elfogad\u00e1sa', 'Elfogad', 'Elfogadom', 'OK',
+    /* Turkish */
+    'T\u00fcm\u00fcn\u00fc kabul et', 'Kabul et', 'Kabul', 'OK',
+    /* Romanian */
+    'Accept\u0103 tot', 'Accept\u0103', 'Sunt de acord', 'OK',
   ];
 
   let neverConsentInitialized = false;
@@ -1363,13 +1933,11 @@
       hideBanner(banner);
       return true;
     }
-    hideBanner(banner);
     return false;
   }
 
   function hideBanner(banner) {
-    banner.style.display = 'none';
-    banner.style.visibility = 'hidden';
+    banner.classList.add('ds-hidden');
     banner.setAttribute('aria-hidden', 'true');
     banner.dataset._sfConsent = '1';
   }
@@ -1408,38 +1976,21 @@
 
   function spoofNavigatorProperties() {
     const randomLang = (Math.random() > 0.5 ? 'en-US' : 'en-GB');
-    try {
-      Object.defineProperty(navigator, 'languages', { get: () => [randomLang, 'en'], configurable: false });
-    } catch (e) {}
-    try {
-      Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => Math.max(2, Math.floor(Math.random() * 4) + 2), configurable: false });
-    } catch (e) {}
-    const ua = navigator.userAgent;
-    const spoofedUa = ua.replace(/(Windows NT 10\.0|Mac OS X 10_\d+)/, 'Windows NT 10.0').replace(/Win64; x64;?/, 'Win64; x64');
-    try {
-      Object.defineProperty(navigator, 'userAgent', { get: () => spoofedUa, configurable: false });
-    } catch (e) {}
-    try {
-      Object.defineProperty(navigator, 'deviceMemory', { get: () => Math.floor(Math.random() * 4) * 2 + 2, configurable: false });
-    } catch (e) {}
-    try {
-      navigator.mediaDevices && navigator.mediaDevices.enumerateDevices && (navigator.mediaDevices.enumerateDevices = function() {
-        return Promise.resolve([{ kind: 'audioinput', deviceId: '', groupId: '', label: '' }]);
-      });
-    } catch (e) {}
+    const hc = Math.max(2, Math.floor(Math.random() * 4) + 2);
+    const dm = Math.floor(Math.random() * 4) * 2 + 2;
+    injectMainWorldCode('(function(){try{Object.defineProperty(Navigator.prototype,"languages",{get:function(){return ' + JSON.stringify([randomLang, 'en']) + '},configurable:true});}catch(e){}' +
+      'try{Object.defineProperty(Navigator.prototype,"hardwareConcurrency",{get:function(){return ' + hc + '},configurable:true});}catch(e){}' +
+      'try{Object.defineProperty(Navigator.prototype,"deviceMemory",{get:function(){return ' + dm + '},configurable:true});}catch(e){}' +
+      'try{if(navigator.mediaDevices&&navigator.mediaDevices.enumerateDevices){navigator.mediaDevices.enumerateDevices=function(){return Promise.resolve([{kind:"audioinput",deviceId:"",groupId:"",label:""}])};}}catch(e){}' +
+      '})();');
   }
 
   function spoofScreenProperties() {
-    const dither = () => Math.floor(Math.random() * 3 - 1);
-    try {
-      Object.defineProperty(screen, 'width', { get: () => window.screen.width + dither(), configurable: false });
-    } catch (e) {}
-    try {
-      Object.defineProperty(screen, 'height', { get: () => window.screen.height + dither(), configurable: false });
-    } catch (e) {}
-    try {
-      Object.defineProperty(screen, 'colorDepth', { get: () => (Math.random() > 0.5 ? 24 : 32), configurable: false });
-    } catch (e) {}
+    injectMainWorldCode('(function(){var ow=screen.width,oh=screen.height;var d=function(){return Math.floor(Math.random()*3-1)};' +
+      'try{Object.defineProperty(Screen.prototype,"width",{get:function(){return ow+d()},configurable:true});}catch(e){}' +
+      'try{Object.defineProperty(Screen.prototype,"height",{get:function(){return oh+d()},configurable:true});}catch(e){}' +
+      'try{Object.defineProperty(Screen.prototype,"colorDepth",{get:function(){return Math.random()>0.5?24:32},configurable:true});}catch(e){}' +
+      '})();');
   }
 
   function removeTrackingStorage() {
@@ -1463,8 +2014,6 @@
       '_uetsid', '_uetvid',
       'trk_', 'bscookie',
       'personalization_id',
-      'sess', 'sessionid', 'session_id',
-      'csrftoken', 'csrf',
       '__cfduid', '_cfduid'
     ];
     try {
@@ -1498,21 +2047,9 @@
   let xssInitialized = false;
 
   function initXssProtection() {
-    if (xssInitialized) return;
-    if (config.xssProtection !== true) return;
-    xssInitialized = true;
-    injectCspMeta();
     sanitizeUrlXss();
     monitorXssMutations();
-    interceptFormXss();
-  }
-
-  function injectCspMeta() {
-    if (document.querySelector('meta[http-equiv="Content-Security-Policy"]')) return;
-    const csp = document.createElement('meta');
-    csp.httpEquiv = 'Content-Security-Policy';
-    csp.content = "default-src 'self' 'unsafe-inline' 'unsafe-eval' https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; object-src 'none'; frame-src 'self' https:;";
-    document.head.appendChild(csp);
+    if (!isAdminPanel) interceptFormXss();
   }
 
   const XSS_PATTERNS = [
@@ -1530,39 +2067,42 @@
     /data\s*:\s*text\/html/i, /data\s*:\s*application\/x-javascript/i
   ];
 
-  function sanitizeUrlXss() {
+  async function sanitizeUrlXss() {
     try {
       const params = new URLSearchParams(window.location.search);
-      let foundXss = false;
+      const REAL_XSS = [/<script/i, /javascript\s*:/i, /onerror\s*=/i, /onload\s*=/i, /<iframe/i];
+      let dirty = false;
       for (const [key, val] of params) {
-        if (XSS_PATTERNS.some(p => p.test(val))) {
-          foundXss = true;
-          if (confirm('DurgaShield blocked a potential XSS attack in the URL parameter "' + key + '".\n\nValue: ' + val.substring(0, 100) + '\n\nReload the page without this parameter?')) {
-            params.delete(key);
-            const newUrl = window.location.origin + window.location.pathname + (params.toString() ? '?' + params.toString() : '') + window.location.hash;
-            window.location.replace(newUrl);
-            return;
-          }
+        if (REAL_XSS.some(p => p.test(val))) {
+          params.delete(key);
+          dirty = true;
         }
+      }
+      if (dirty) {
+        const newUrl = window.location.origin + window.location.pathname +
+          (params.toString() ? '?' + params.toString() : '') + window.location.hash;
+        window.history.replaceState(null, '', newUrl);
+        showWarning('DurgaShield: Removed suspicious XSS parameter from URL.');
       }
     } catch (e) {}
   }
 
+  var _xssObserver = null;
   function monitorXssMutations() {
-    const xssObserver = new MutationObserver((mutations) => {
+    if (_xssObserver) return;
+    _xssObserver = new MutationObserver((mutations) => {
+      if (siteDisabled) return;
       for (const mutation of mutations) {
         for (const node of mutation.addedNodes) {
           if (node.nodeType === 1) {
             if (node.tagName === 'SCRIPT') {
               const src = node.src || '';
-              const text = node.textContent || '';
-              // Skip legitimate scripts that trigger false positives
-              const falsePositivePatterns = ['recaptcha', 'google-analytics', 'googletagmanager', 'facebook.net', 'connect.facebook.net', 'hotjar.com', 'doubleclick.net', 'googlesyndication'];
-              if (src && falsePositivePatterns.some(p => src.includes(p))) continue;
-              if (XSS_PATTERNS.some(p => p.test(src) || p.test(text))) {
+              const type = node.type || '';
+              if (type && type !== 'text/javascript' && type !== 'module' && type !== 'application/javascript') continue;
+              if (src && XSS_PATTERNS.some(p => p.test(src))) {
                 node.remove();
                 queueBlockCount(1);
-                chrome.runtime.sendMessage({ type: 'xssDetected', data: src || text.substring(0, 200) });
+                _b.runtime.sendMessage({ type: MSG.XSS_DETECTED, data: src.substring(0, 200) });
               }
             }
             if (node.tagName === 'IFRAME') {
@@ -1582,10 +2122,17 @@
         }
       }
     });
-    xssObserver.observe(document.documentElement, { childList: true, subtree: true });
+    _xssObserver.observe(document.documentElement, { childList: true, subtree: true });
   }
 
   function interceptFormXss() {
+    const XSS_PATTERNS_FORM = [
+      /<script[^>]*>/i,
+      /javascript\s*:/i,
+      /onerror\s*=/i, /onload\s*=/i,
+      /<iframe[^>]*>/i,
+      /expression\s*\(\s*[^)]/i,
+    ];
     document.addEventListener('submit', (e) => {
       const form = e.target;
       if (form.tagName !== 'FORM') return;
@@ -1593,7 +2140,7 @@
       const inputs = form.querySelectorAll('input[type="text"], input[type="search"], input[type="url"], input[type="email"], textarea');
       for (const input of inputs) {
         const val = input.value || '';
-        if (XSS_PATTERNS.some(p => p.test(val))) {
+        if (XSS_PATTERNS_FORM.some(p => p.test(val))) {
           foundXss = true;
           input.style.border = '2px solid red';
           input.title = 'DurgaShield: Removed suspicious content';
@@ -1602,7 +2149,7 @@
       }
       if (foundXss) {
         queueBlockCount(1);
-        chrome.runtime.sendMessage({ type: 'xssDetected', data: 'form submission' });
+        _b.runtime.sendMessage({ type: MSG.XSS_DETECTED, data: 'form submission' });
       }
     }, true);
   }
@@ -1620,9 +2167,13 @@
     document.addEventListener('click', clearClickHandler, true);
   }
 
+  var scanOverlaysThrottle = 0;
   function scanSuspiciousOverlays() {
-    const all = document.querySelectorAll('*');
-    for (const el of all) {
+    var now = Date.now();
+    if (now - scanOverlaysThrottle < 2000) return;
+    scanOverlaysThrottle = now;
+    var candidates = document.querySelectorAll('div, iframe, object, embed');
+    for (const el of candidates) {
       if (isSuspiciousOverlay(el)) {
         clearClickOverlays.add(el);
         el.style.outline = '2px solid rgba(233,69,96,0.4)';
@@ -1636,19 +2187,19 @@
     if (el.dataset._sfClearClicked) return false;
     const style = window.getComputedStyle(el);
     if (style.display === 'none' || style.visibility === 'hidden') return false;
+    if (style.pointerEvents === 'none') return false;
     const rect = el.getBoundingClientRect();
     if (rect.width < 5 || rect.height < 5) return false;
     const opacity = parseFloat(style.opacity);
-    if (opacity > 0.5) return false;
-    if (rect.width < window.innerWidth * 0.5 || rect.height < window.innerHeight * 0.5) return false;
+    if (opacity >= 0.1) return false;
     if (style.position !== 'fixed' && style.position !== 'absolute') return false;
-    if (style.zIndex < 999) return false;
+    if (style.zIndex < 99) return false;
     const bg = style.backgroundColor;
-    if (bg === 'rgba(0, 0, 0, 0)' || bg === 'transparent') return true;
-    return opacity < 0.3;
+    if (bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') return false;
+    return true;
   }
 
-  function clearClickHandler(e) {
+  async function clearClickHandler(e) {
     const target = e.target;
     let overlay = target;
     while (overlay && overlay !== document.body) {
@@ -1656,7 +2207,7 @@
         e.preventDefault();
         e.stopPropagation();
         var tagInfo = (overlay.tagName || '') + (overlay.id ? '#' + overlay.id : '');
-        var confirmed = confirm('DurgaShield ClearClick: This click was intercepted by a transparent overlay.\n\nThis could be a clickjacking attempt. Allow the click anyway?\n\nElement: ' + tagInfo + '\n\n- Click OK to allow the click through.\n- Click Cancel to dismiss this warning (overlay stays blocked).');
+        var confirmed = await showConfirmModal('DurgaShield ClearClick: This click was intercepted by a transparent overlay.\n\nThis could be a clickjacking attempt. Allow the click anyway?\n\nElement: ' + tagInfo + '\n\n- Click OK to allow the click through.\n- Click Cancel to dismiss this warning (overlay stays blocked).');
         if (confirmed) {
           overlay.dataset._sfClearClicked = '1';
           clearClickOverlays.delete(overlay);
@@ -1717,7 +2268,7 @@
             w.textContent = 'DurgaShield ABE: Blocked request to local network from this page.';
             document.body.prepend(w);
             setTimeout(() => w.remove(), 8000);
-            chrome.runtime.sendMessage({ type: 'abeBlocked', data: url.hostname });
+            _b.runtime.sendMessage({ type: MSG.ABE_BLOCKED, data: url.hostname });
           }
         }
       } catch (e) {}
@@ -1783,64 +2334,101 @@
   }
 
   /* ---------- AudioContext Fingerprinting Protection ---------- */
-  function audioFingerprintProtection() {
+  function initFingerprintingProtection() {
     if (config.stealth !== true) return;
-    const OrigAudioContext = window.AudioContext || window.webkitAudioContext;
-    if (!OrigAudioContext) return;
-    const origGetFloat = AnalyserNode.prototype.getFloatFrequencyData;
-    const origGetByte = AnalyserNode.prototype.getByteFrequencyData;
-    const origByteTime = AnalyserNode.prototype.getByteTimeDomainData;
-    AnalyserNode.prototype.getFloatFrequencyData = function(array) {
-      origGetFloat.call(this, array);
-      for (let i = 0; i < array.length; i++) array[i] += (Math.random() - 0.5) * 0.5;
-    };
-    AnalyserNode.prototype.getByteFrequencyData = function(array) {
-      origGetByte.call(this, array);
-      for (let i = 0; i < array.length; i++) array[i] = Math.max(0, Math.min(255, array[i] + Math.floor(Math.random() * 3 - 1)));
-    };
-    AnalyserNode.prototype.getByteTimeDomainData = function(array) {
-      origByteTime.call(this, array);
-      for (let i = 0; i < array.length; i++) array[i] = Math.max(0, Math.min(255, array[i] + Math.floor(Math.random() * 3 - 1)));
-    };
-    try {
-      Object.defineProperty(window, 'AudioContext', { get: () => OrigAudioContext, configurable: false });
-    } catch (e) {}
-  }
 
-  /* ---------- WebGL Fingerprinting Protection ---------- */
-  function webglFingerprintProtection() {
-    if (config.stealth !== true) return;
+    /* AudioContext — AnalyserNode prototype noise (shared DOM prototype) */
+    if (window.AudioContext || window.webkitAudioContext) {
+      const origGetFloat = AnalyserNode.prototype.getFloatFrequencyData;
+      const origGetByte = AnalyserNode.prototype.getByteFrequencyData;
+      const origByteTime = AnalyserNode.prototype.getByteTimeDomainData;
+      AnalyserNode.prototype.getFloatFrequencyData = function(array) {
+        origGetFloat.call(this, array);
+        for (let i = 0; i < array.length; i++) array[i] += (Math.random() - 0.5) * 0.5;
+      };
+      AnalyserNode.prototype.getByteFrequencyData = function(array) {
+        origGetByte.call(this, array);
+        for (let i = 0; i < array.length; i++) array[i] = Math.max(0, Math.min(255, array[i] + Math.floor(Math.random() * 3 - 1)));
+      };
+      AnalyserNode.prototype.getByteTimeDomainData = function(array) {
+        origByteTime.call(this, array);
+        for (let i = 0; i < array.length; i++) array[i] = Math.max(0, Math.min(255, array[i] + Math.floor(Math.random() * 3 - 1)));
+      };
+    }
+
+    /* Canvas — add subtle noise instead of returning static 1x1; skip if antiFingerprinting already patched */
+    if (!HTMLCanvasElement.prototype._dgsPatched) try {
+      const origToDataURL = HTMLCanvasElement.prototype.toDataURL;
+      const origToBlob = HTMLCanvasElement.prototype.toBlob;
+      const origGetImageData = CanvasRenderingContext2D.prototype.getImageData;
+      CanvasRenderingContext2D.prototype.getImageData = function(x, y, w, h) {
+        return origGetImageData.call(this, x, y, w, h);
+      };
+      HTMLCanvasElement.prototype.toDataURL = function(type) {
+        var ctx = this.getContext('2d');
+        if (ctx) {
+          const w = this.width, h = this.height;
+          const clean = origGetImageData.call(ctx, 0, 0, w, h);
+          const noisy = new Uint8ClampedArray(clean.data);
+          for (let i = 0; i < noisy.length; i += 4) {
+            noisy[i] = Math.max(0, Math.min(255, noisy[i] + Math.floor(Math.random() * 3 - 1)));
+            noisy[i + 1] = Math.max(0, Math.min(255, noisy[i + 1] + Math.floor(Math.random() * 3 - 1)));
+            noisy[i + 2] = Math.max(0, Math.min(255, noisy[i + 2] + Math.floor(Math.random() * 3 - 1)));
+          }
+          ctx.putImageData(clean, 0, 0);
+          ctx.putImageData(new ImageData(noisy, w, h), 0, 0);
+          const result = origToDataURL.call(this, type);
+          ctx.putImageData(clean, 0, 0);
+          return result;
+        }
+        return origToDataURL.call(this, type);
+      };
+      HTMLCanvasElement.prototype.toBlob = function(callback, type) {
+        var ctx = this.getContext('2d');
+        if (ctx) {
+          const w = this.width, h = this.height;
+          const clean = origGetImageData.call(ctx, 0, 0, w, h);
+          const noisy = new Uint8ClampedArray(clean.data);
+          for (let i = 0; i < noisy.length; i += 4) {
+            noisy[i] = Math.max(0, Math.min(255, noisy[i] + Math.floor(Math.random() * 3 - 1)));
+            noisy[i + 1] = Math.max(0, Math.min(255, noisy[i + 1] + Math.floor(Math.random() * 3 - 1)));
+            noisy[i + 2] = Math.max(0, Math.min(255, noisy[i + 2] + Math.floor(Math.random() * 3 - 1)));
+          }
+          ctx.putImageData(new ImageData(noisy, w, h), 0, 0);
+          origToBlob.call(this, callback, type);
+          ctx.putImageData(clean, 0, 0);
+        }
+      };
+    } catch (e) {}
+
+    /* WebGL */
     const canvas = document.createElement('canvas');
     const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-    if (!gl) return;
-    const origGetParameter = WebGLRenderingContext.prototype.getParameter;
-    const origGetExtension = WebGLRenderingContext.prototype.getExtension;
-    const origReadPixels = WebGLRenderingContext.prototype.readPixels;
-    WebGLRenderingContext.prototype.getParameter = function(pname) {
-      const result = origGetParameter.call(this, pname);
-      if (pname === 37446) return 'DurgaShield WebGL' + (result || '').substring(14);
-      if (pname === 7936) return 'DurgaShield' + (result || '').substring(9);
-      if (pname === 7937) return 'DurgaShield Shading Language' + (result || '').substring(result ? result.length - 10 : 0);
-      if (pname === 35724) return 'WebGL GLSL' + (result || '').substring(Math.min(8, (result || '').length));
-      return result;
-    };
-    WebGLRenderingContext.prototype.getExtension = function(name) {
-      if (name && (
-        name.startsWith('WEBGL_debug_renderer_info') ||
-        name.startsWith('WEBGL_debug_shaders') ||
-        name.startsWith('WEBGL_depth_texture') === false
-      )) return null;
-      return origGetExtension.call(this, name);
-    };
-    const gl2 = canvas.getContext('webgl2');
-    if (gl2) {
-      WebGL2RenderingContext.prototype.getParameter = WebGLRenderingContext.prototype.getParameter;
+    if (gl) {
+      const origGetParameter = WebGLRenderingContext.prototype.getParameter;
+      const origGetExtension = WebGLRenderingContext.prototype.getExtension;
+      WebGLRenderingContext.prototype.getParameter = function(pname) {
+        const result = origGetParameter.call(this, pname);
+        if (pname === 37446) return 'Intel Inc. Intel Iris OpenGL Engine';
+        if (pname === 7936) return 'WebGL 1.0 (OpenGL ES 2.0 Chromium)';
+        if (pname === 7937) return 'WebGL GLSL ES 1.0 (OpenGL ES GLSL ES 1.0 Chromium)';
+        if (pname === 35724) return 'WebGL GLSL ES 1.0 (OpenGL ES GLSL ES 1.0 Chromium)';
+        return result;
+      };
+      WebGLRenderingContext.prototype.getExtension = function(name) {
+        if (name && (
+          name.startsWith('WEBGL_debug_renderer_info') ||
+          name.startsWith('WEBGL_debug_shaders')
+        )) return null;
+        return origGetExtension.call(this, name);
+      };
+      const gl2 = canvas.getContext('webgl2');
+      if (gl2) {
+        WebGL2RenderingContext.prototype.getParameter = WebGLRenderingContext.prototype.getParameter;
+      }
     }
-  }
 
-  /* ---------- DOMRect Fingerprinting Protection ---------- */
-  function domRectProtection() {
-    if (config.stealth !== true) return;
+    /* DOMRect */
     try {
       const origFromRect = DOMRect.fromRect;
       DOMRect.fromRect = function(rect) {
@@ -1860,10 +2448,51 @@
         if (rects.length === 0) return rects;
         const dither = (Math.random() - 0.5) * 0.01;
         try {
-          const rect = rects[0];
-          return [new DOMRect(rect.x + dither, rect.y + dither, rect.width, rect.height)];
+          return Array.from(rects).map(function(r) {
+            return new DOMRect(r.x + dither, r.y + dither, r.width, r.height);
+          });
         } catch (e) {}
         return rects;
+      };
+    } catch (e) {}
+  }
+
+  /* ---------- Heuristic Detection (Aggressive Cookies, Beacons) ---------- */
+  function initHeuristicDetection() {
+    if (config.enhancedTracking !== true) return;
+    let cookieAccessCount = 0;
+    let cookieAccessThreshold = 50;
+
+    try {
+      const origCookieDesc = Object.getOwnPropertyDescriptor(Document.prototype, 'cookie') || Object.getOwnPropertyDescriptor(HTMLDocument.prototype, 'cookie');
+      if (origCookieDesc) {
+        Object.defineProperty(document, 'cookie', {
+          get: function() {
+            cookieAccessCount++;
+            if (cookieAccessCount > cookieAccessThreshold) {
+              cookieAccessCount = 0;
+              _b.runtime.sendMessage({ type: MSG.INCREMENT_BLOCKED, category: 'privacy', count: 1 }).catch(() => {});
+            }
+            return origCookieDesc.get.call(document);
+          },
+          set: function(val) { origCookieDesc.set.call(document, val); },
+          configurable: false
+        });
+      }
+    } catch (e) {}
+
+    try {
+      const origSendBeacon = navigator.sendBeacon;
+      navigator.sendBeacon = function(url, data) {
+        try {
+          const u = new URL(url);
+          const trackingDomains = ['doubleclick.net', 'google-analytics.com', 'googletagmanager.com', 'facebook.com/tr', 'amazon-adsystem.com', 'scorecardresearch.com', 'outbrain.com', 'taboola.com', 'criteo.com', 'adsrvr.org', 'adnxs.com', 'rubiconproject.com', 'pubmatic.com'];
+          if (trackingDomains.some(function(d) { return u.hostname.includes(d) || u.pathname.includes(d); })) {
+            _b.runtime.sendMessage({ type: MSG.INCREMENT_BLOCKED, category: 'privacy', count: 1 }).catch(() => {});
+            return true;
+          }
+        } catch (e) {}
+        return origSendBeacon.call(this, url, data);
       };
     } catch (e) {}
   }
@@ -1871,12 +2500,10 @@
   /* ---------- History API Protection ---------- */
   function historyProtection() {
     if (config.stealth !== true) return;
+    /* SPAs rely on history.length for routing — skip them */
+    if (window.history.pushState) return;
     try {
-      Object.defineProperty(history, 'length', { get: function() { return Math.max(1, Math.floor(Math.random() * 10)); }, configurable: false });
-    } catch (e) {}
-    try {
-      const origPushState = history.pushState;
-      history.pushState = function() {};
+      Object.defineProperty(history, 'length', { get: function() { return Math.max(1, Math.floor(Math.random() * 10)); }, configurable: true });
     } catch (e) {}
   }
 
@@ -1956,7 +2583,7 @@
     /debit.?card/i, /credit.?card/i, /atm.?card/i,
     /payment/i, /amount/i, /currency/i, /transaction/i, /pay.?now/i,
     /otp/i, /password.?token/i, /txn.?password/i, /transaction.?password/i,
-    /pin/i, /atm.?pin/i, /card.?pin/i, /debit.?pin/i,
+    /\bpin\b/i, /atm.?pin/i, /card.?pin/i, /debit.?pin/i,
     /routing.?number/i, /sort.?code/i, /iban/i, /swift/i, /bic/i
   ];
 
@@ -1985,8 +2612,8 @@
     event.stopPropagation();
     queueBlockCount(1);
     showWarning('Payment form blocked on insecure (HTTP) page. Use a secure (HTTPS) connection.');
-    if (typeof chrome !== 'undefined' && chrome.runtime) {
-      chrome.runtime.sendMessage({ type: 'incrementBlocked', category: 'phishing' });
+    if (_b.runtime) {
+      _b.runtime.sendMessage({ type: MSG.INCREMENT_BLOCKED, category: 'phishing' });
     }
   }
 
@@ -2025,8 +2652,7 @@
                 const cleanFile = new File([blob], f.name, { type: f.type });
                 const dt = new DataTransfer();
                 dt.items.add(cleanFile);
-                const fileInput = document.querySelector('input[type="file"]');
-                if (fileInput) fileInput.files = dt.files;
+                input.files = dt.files;
               }, file.type, 0.92);
             };
             img.src = dataUrl;
@@ -2120,98 +2746,60 @@
   function detectKeyloggers() {
     const host = window.location.hostname;
     if (host.includes('amazon.') || host.includes('payments.')) return;
-    const origAddEventListener = EventTarget.prototype.addEventListener;
-    let warned = false;
-    EventTarget.prototype.addEventListener = function(type, listener, options) {
-      if ((type === 'keydown' || type === 'keyup' || type === 'keypress') && (this === document || this === window)) {
-        if (!warned) {
-          const stack = new Error().stack;
-          if (stack && !stack.includes('durgashield') && !stack.includes('content.js')) {
-            warned = true;
-            queueBlockCount(1);
-            showWarning('Keylogger detected: page is tracking keystrokes.');
-            if (typeof chrome !== 'undefined' && chrome.runtime) {
-              chrome.runtime.sendMessage({ type: 'incrementBlocked', category: 'malware' });
-            }
-          }
+    /* Don't patch addEventListener — almost every site uses keyboard events legitimately.
+       Only flag if keystroke exfiltration to a third-party URL is observed via sendBeacon. */
+    const origSendBeacon = navigator.sendBeacon.bind(navigator);
+    navigator.sendBeacon = function(url) {
+      try {
+        const u = new URL(typeof url === 'string' ? url : '');
+        const h = u.hostname.replace(/^www\./, '');
+        if (h !== hostname() && /key|keystroke|input|type/i.test(u.pathname + u.search)) {
+          queueBlockCount(1);
+          showWarning('Possible keystroke exfiltration detected to: ' + h);
         }
-      }
-      return origAddEventListener.call(this, type, listener, options);
+      } catch (e) {}
+      return origSendBeacon.apply(this, arguments);
     };
-    const inputProto = HTMLInputElement.prototype;
-    if (inputProto) {
-      ['onkeydown', 'onkeyup', 'onkeypress'].forEach(prop => {
-        try {
-          const desc = Object.getOwnPropertyDescriptor(inputProto, prop);
-          if (desc && desc.configurable) {
-            Object.defineProperty(inputProto, prop, {
-              get: function() { return this['_dgs_' + prop]; },
-              set: function(fn) {
-                if (typeof fn === 'function' && !warned) {
-                  warned = true;
-                  queueBlockCount(1);
-                  showWarning('Keylogger detected: input keystroke tracking.');
-                }
-                this['_dgs_' + prop] = fn;
-              },
-              configurable: true
-            });
-          }
-        } catch (e) {}
-      });
-    }
   }
 
   /* ---------- Clipboard Hijack Prevention ---------- */
   function preventClipboardHijack() {
-    if (navigator.clipboard) {
-      if (navigator.clipboard.read) {
-        const origRead = navigator.clipboard.read.bind(navigator.clipboard);
-        navigator.clipboard.read = async function() {
-          if (!confirm('DurgaShield: This page wants to read your clipboard. Allow?')) {
-            throw new Error('Clipboard read blocked by DurgaShield');
-          }
-          return origRead();
-        };
-      }
-      if (navigator.clipboard.readText) {
-        const origReadText = navigator.clipboard.readText.bind(navigator.clipboard);
-        navigator.clipboard.readText = async function() {
-          if (!confirm('DurgaShield: This page wants to read your clipboard. Allow?')) {
-            throw new Error('Clipboard read blocked by DurgaShield');
-          }
-          return origReadText();
-        };
-      }
-    }
+    /* Browser native security already requires transient activation for clipboard.read/readText.
+       Keeping the overrides would add a redundant second prompt. Skipped intentionally. */
   }
 
   /* ---------- Facebook Feed Ad Removal ---------- */
-  function removeFacebookAds() {
+  function facebookScanAndRemove() {
     if (!window.location.hostname.includes('facebook.com')) return;
-    function scanAndRemove() {
-      const feedStream = document.querySelector('div[role="feed"]');
-      if (!feedStream) return;
-      const items = feedStream.querySelectorAll('> div > div');
-      for (const item of items) {
-        if (item.dataset._dgs_fb_scanned) continue;
-        item.dataset._dgs_fb_scanned = '1';
-        const text = item.textContent.toLowerCase();
-        if (text.includes('sponsored') || text.includes('suggested') || text.includes('recommended')) {
-          const spans = item.querySelectorAll('span');
-          for (const span of spans) {
-            if (span.textContent.toLowerCase() === 'sponsored' || span.textContent.toLowerCase() === 'suggested for you') {
-              item.remove();
-              queueBlockCount(1);
-              break;
-            }
+    const feedStream = document.querySelector('div[role="feed"]');
+    if (!feedStream) return;
+    const container = feedStream.firstElementChild;
+    if (!container) return;
+    const children = container.children;
+    const lastIdx = facebookScanAndRemove._lastIdx || 0;
+    if (children.length <= lastIdx) return;
+    for (let i = lastIdx; i < children.length; i++) {
+      const item = children[i];
+      if (item.dataset._dgs_fb_scanned) continue;
+      item.dataset._dgs_fb_scanned = '1';
+      const text = item.textContent.toLowerCase();
+      if (text.includes('sponsored') || text.includes('suggested') || text.includes('recommended')) {
+        const spans = item.querySelectorAll('span');
+        for (const span of spans) {
+          if (span.textContent.toLowerCase() === 'sponsored' || span.textContent.toLowerCase() === 'suggested for you') {
+            item.remove();
+            queueBlockCount(1);
+            break;
           }
         }
       }
     }
-    scanAndRemove();
-    const observer = new MutationObserver(scanAndRemove);
-    observer.observe(document.body, { childList: true, subtree: true });
+    facebookScanAndRemove._lastIdx = children.length;
+  }
+
+  function removeFacebookAds() {
+    if (!window.location.hostname.includes('facebook.com')) return;
+    facebookScanAndRemove();
   }
 
   /* ---------- Webmail Ads (Gmail/Outlook/Yahoo) ---------- */
@@ -2229,18 +2817,29 @@
     );
     for (const el of candidates) {
       const style = window.getComputedStyle(el);
-      if (style.position === 'fixed' && (style.zIndex >= 99999 || el.offsetWidth >= window.innerWidth * 0.8)) {
-        const closeBtn = el.querySelector(
-          'button[class*="close"], button[aria-label*="close"], button[aria-label*="Close"], ' +
-          'button[title*="close"], button[title*="Close"], .close, .dismiss, [class*="closebtn"]'
-        );
-        if (closeBtn) {
-          closeBtn.click();
-          queueBlockCount(1);
-        } else {
-          el.style.display = 'none';
-          queueBlockCount(1);
-        }
+      if (style.position !== 'fixed') continue;
+      if (!(parseInt(style.zIndex) >= 99999 || el.offsetWidth >= window.innerWidth * 0.8)) continue;
+      /* Skip login dialogs, galleries, and anything with password inputs */
+      if (el.querySelector('input[type="password"]')) continue;
+      /* Check text for ad/subscription/interstitial signals */
+      const text = (el.textContent || '').toLowerCase();
+      const isLogin = el.querySelector('input[type="email"], input[type="text"][autocomplete="email"]');
+      if (isLogin) continue;
+      const isAdLike = text.includes('subscribe') || text.includes('newsletter') ||
+                       text.includes('download our app') || text.includes('notification') ||
+                       text.includes('allow notifications') || text.includes('enable notifications') ||
+                       el.querySelector('iframe[src*="ad"], img[src*="ad"]');
+      if (!isAdLike) continue;
+      const closeBtn = el.querySelector(
+        'button[class*="close"], button[aria-label*="close"], button[aria-label*="Close"], ' +
+        'button[title*="close"], button[title*="Close"], .close, .dismiss, [class*="closebtn"]'
+      );
+      if (closeBtn) {
+        closeBtn.click();
+        queueBlockCount(1);
+      } else {
+        el.classList.add('ds-hidden');
+        queueBlockCount(1);
       }
     }
   }
@@ -2248,6 +2847,10 @@
   /* ---------- Tech Support Scam Detection ---------- */
   function detectTechSupportScams() {
     const bodyText = document.body ? document.body.innerText.toLowerCase() : '';
+    const urlLower = (window.location.href || '').toLowerCase();
+    if (/(support|help|kb\.|knowledgebase|docs\.|learn\.|community\.|blog\.|status\.)/i.test(urlLower)) return;
+    const metaDesc = document.querySelector('meta[name="description"], meta[property="og:description"]');
+    if (metaDesc && /(product support|help center|knowledge base|documentation|tutorial|blog post|technical (support|article))/i.test(metaDesc.getAttribute('content') || '')) return;
     const indicators = [
       'virus detected', 'your computer is infected', 'your pc has a virus',
       'call windows support', 'call microsoft support', 'call apple support',
@@ -2260,8 +2863,8 @@
     if (found.length > 0) {
       queueBlockCount(found.length);
       showWarning('Tech support scam detected! Do not call any phone numbers on this page.');
-      if (typeof chrome !== 'undefined' && chrome.runtime) {
-        chrome.runtime.sendMessage({ type: 'incrementBlocked', category: 'malware', count: found.length });
+      if (_b && _b.runtime) {
+        _b.runtime.sendMessage({ type: MSG.INCREMENT_BLOCKED, category: 'malware', count: found.length });
       }
     }
   }
@@ -2269,6 +2872,13 @@
   /* ---------- Crypto Scam Page Detection ---------- */
   function detectCryptoScams() {
     const bodyText = document.body ? document.body.innerText.toLowerCase() : '';
+    const urlLower = (window.location.href || '').toLowerCase();
+    if (/(support|help|kb\.|knowledgebase|docs\.|learn\.|community\.|blog\.|status\.)/i.test(urlLower)) return;
+    const cryptoNewsDomains = ['coindesk.com', 'cointelegraph.com', 'binance.com', 'coinbase.com', 'kraken.com',
+      'crypto.news', 'decrypt.co', 'theblock.co', 'bitcoinmagazine.com', 'bitcoin.org',
+      'ethereum.org', 'coinmarketcap.com', 'coingecko.com', 'defillama.com', 'rekt.news',
+      'messari.io', 'unchainedcrypto.com', 'bankless.com', 'blockworks.co', 'coincodex.com'];
+    if (cryptoNewsDomains.some(d => urlLower.includes(d))) return;
     const indicators = [
       'free airdrop', 'claim your airdrop', 'free crypto', 'double your bitcoin',
       'send 1 get 10', 'send eth get', 'giveaway', 'fake wallet',
@@ -2287,8 +2897,8 @@
     if (found.length > 0) {
       queueBlockCount(found.length);
       showWarning('Potential crypto scam detected! Do not connect your wallet or enter seed phrases.');
-      if (typeof chrome !== 'undefined' && chrome.runtime) {
-        chrome.runtime.sendMessage({ type: 'incrementBlocked', category: 'crypto', count: found.length });
+      if (_b && _b.runtime) {
+        _b.runtime.sendMessage({ type: MSG.INCREMENT_BLOCKED, category: 'crypto', count: found.length });
       }
     }
     const links = document.querySelectorAll('a[href*="airdrop"], a[href*="giveaway"], a[href*="claim"], a[href*="free-eth"], a[href*="free-btc"]');
@@ -2310,29 +2920,37 @@
     if (inputs.length > 0) {
       queueBlockCount(inputs.length);
       showWarning('Password field detected on insecure (HTTP) page. Your credentials could be intercepted!');
-      if (typeof chrome !== 'undefined' && chrome.runtime) {
-        chrome.runtime.sendMessage({ type: 'incrementBlocked', category: 'phishing', count: inputs.length });
+      if (_b && _b.runtime) {
+        _b.runtime.sendMessage({ type: MSG.INCREMENT_BLOCKED, category: 'phishing', count: inputs.length });
       }
     }
   }
 
+  /* ---------- SHA-1 helper (for password leak check) ---------- */
+  async function sha1Hex(str) {
+    const buf = await crypto.subtle.digest('SHA-1', new TextEncoder().encode(str));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase();
+  }
+
   /* ---------- Automatic Password Leak Check ---------- */
   function setupPasswordLeakCheck() {
-    if (typeof chrome === 'undefined' || !chrome.runtime) return;
+    if (typeof _b === 'undefined' || !_b.runtime) return;
     let checkTimer = null;
     document.addEventListener('input', function(e) {
       const el = e.target;
       if (el.type !== 'password' || !el.value || el.value.length < 6) return;
       if (checkTimer) clearTimeout(checkTimer);
-      checkTimer = setTimeout(function() {
-        chrome.runtime.sendMessage({ type: 'autoCheckPassword', password: el.value }, function(r) {});
+      checkTimer = setTimeout(async function() {
+        const hash = await sha1Hex(el.value);
+        _b.runtime.sendMessage({ type: MSG.AUTO_CHECK_PASSWORD, hash: hash }).catch(() => {});
       }, 2000);
     }, true);
-    document.addEventListener('submit', function(e) {
+    document.addEventListener('submit', async function(e) {
       const form = e.target;
       const pw = form.querySelector('input[type="password"]');
       if (pw && pw.value && pw.value.length >= 6) {
-        chrome.runtime.sendMessage({ type: 'autoCheckPassword', password: pw.value }, function(r) {});
+        const hash = await sha1Hex(pw.value);
+        _b.runtime.sendMessage({ type: MSG.AUTO_CHECK_PASSWORD, hash: hash }).catch(() => {});
       }
     }, true);
   }
@@ -2360,7 +2978,7 @@
         if (matches && matches.length > 0) {
           warned = true;
           showWarning('GenAI Data Leak Prevention: ' + p.label + ' detected! Sending personal data to AI may compromise your privacy.');
-          chrome.runtime.sendMessage({ type: 'incrementBlocked', category: 'privacy', count: matches.length });
+          _b.runtime.sendMessage({ type: MSG.INCREMENT_BLOCKED, category: 'privacy', count: matches.length });
           return true;
         }
       }
@@ -2368,10 +2986,13 @@
     }
     const textInputs = document.querySelectorAll('textarea, input[type="text"], input[type="search"], div[contenteditable="true"]');
     for (const el of textInputs) {
+      let debounceTimer;
       el.addEventListener('input', function() {
-        checkInput(this.value || this.textContent || '');
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => { checkInput(this.value || this.textContent || ''); }, 500);
       });
       el.addEventListener('blur', function() {
+        clearTimeout(debounceTimer);
         checkInput(this.value || this.textContent || '');
       });
     }
@@ -2397,7 +3018,7 @@
         const spans = art.querySelectorAll('span');
         for (const s of spans) {
           if (s.textContent.trim() === 'Sponsored' || s.textContent.trim() === 'Paid partnership') {
-            art.style.display = 'none';
+            art.classList.add('ds-hidden');
             count++;
             break;
           }
@@ -2407,7 +3028,7 @@
       const promoted = document.querySelectorAll('div[style*="display: flex"][role="presentation"] a[href*="/ads/"]');
       for (const el of promoted) {
         const feedItem = el.closest('article, div[style*="margin-bottom"]');
-        if (feedItem) { feedItem.style.display = 'none'; count++; }
+        if (feedItem) { feedItem.classList.add('ds-hidden'); count++; }
       }
     }
 
@@ -2416,18 +3037,18 @@
       const tweets = document.querySelectorAll('article[data-testid="tweet"]');
       for (const t of tweets) {
         const span = t.querySelector('div[data-testid="placementTracking"]');
-        if (span) { t.style.display = 'none'; count++; continue; }
+        if (span) { t.classList.add('ds-hidden'); count++; continue; }
         const labels = t.querySelectorAll('span');
         for (const s of labels) {
           if (s.textContent.trim() === 'Promoted' || s.textContent.trim() === 'Ad') {
-            t.style.display = 'none'; count++; break;
+            t.classList.add('ds-hidden'); count++; break;
           }
         }
       }
       const sidebarAds = document.querySelectorAll('aside[aria-label="Who to follow"] div[data-testid="UserCell"]');
       for (const el of sidebarAds) {
         const parent = el.closest('section');
-        if (parent) { parent.style.display = 'none'; count++; }
+        if (parent) { parent.classList.add('ds-hidden'); count++; }
       }
     }
 
@@ -2439,17 +3060,17 @@
         for (const s of spans) {
           const txt = s.textContent.trim().toLowerCase();
           if (txt === 'promoted' || txt === 'sponsored' || txt.includes('promoted')) {
-            item.style.display = 'none'; count++; break;
+            item.classList.add('ds-hidden'); count++; break;
           }
         }
       }
       const sidebarAds2 = document.querySelectorAll('aside div[class*="ad"], aside div[id*="ad"]');
-      for (const el of sidebarAds2) { el.style.display = 'none'; count++; }
+      for (const el of sidebarAds2) { el.classList.add('ds-hidden'); count++; }
     }
 
     if (count > 0) {
       queueBlockCount(count);
-      chrome.runtime.sendMessage({ type: 'incrementBlocked', category: 'ads', count: count });
+      _b.runtime.sendMessage({ type: MSG.INCREMENT_BLOCKED, category: 'ads', count: count });
     }
   }
 
@@ -2463,21 +3084,21 @@
       'div[class*="preroll"], div[class*="midroll"], div[class*="ad-container"], ' +
       'div[class*="ad-display"], div[class*="ad-controls"], div[aria-label*="ad"]'
     );
-    for (const el of adBanners) { el.style.display = 'none'; }
+    for (const el of adBanners) { el.classList.add('ds-hidden'); }
     const adIframes = document.querySelectorAll('iframe[src*="ad"], iframe[src*="doubleclick"], iframe[src*="googlesyndication"]');
-    for (const f of adIframes) { f.style.display = 'none'; }
+    for (const f of adIframes) { f.classList.add('ds-hidden'); }
     const player = document.querySelector('video');
     if (player) {
       const adOverlay = player.closest('div[class*="video-player"]');
       if (adOverlay) {
         const overlays = adOverlay.querySelectorAll('div[class*="overlay"], div[class*="ad-overlay"]');
-        for (const o of overlays) { o.style.display = 'none'; }
+        for (const o of overlays) { o.classList.add('ds-hidden'); }
       }
     }
     const adCount = adBanners.length + adIframes.length;
     if (adCount > 0) {
       queueBlockCount(adCount);
-      chrome.runtime.sendMessage({ type: 'incrementBlocked', category: 'ads', count: adCount });
+      _b.runtime.sendMessage({ type: MSG.INCREMENT_BLOCKED, category: 'ads', count: adCount });
     }
   }
 
@@ -2490,13 +3111,13 @@
       'table[class*="ads"], tr[class*="ad"], td[class*="ad"], ' +
       'div[class*="sponsored"], div[class*="promotion"], div[class*="promo"]'
     );
-    for (const el of adLabels) { el.style.display = 'none'; }
+    for (const el of adLabels) { el.classList.add('ds-hidden'); }
     const sidePromos = document.querySelectorAll('div[class*="promo"], div[id*="promo"], div[class*="offer"], div[id*="offer"]');
-    for (const el of sidePromos) { el.style.display = 'none'; }
+    for (const el of sidePromos) { el.classList.add('ds-hidden'); }
     const adCount2 = adLabels.length + sidePromos.length;
     if (adCount2 > 0) {
       queueBlockCount(adCount2);
-      chrome.runtime.sendMessage({ type: 'incrementBlocked', category: 'ads', count: adCount2 });
+      _b.runtime.sendMessage({ type: MSG.INCREMENT_BLOCKED, category: 'ads', count: adCount2 });
     }
   }
 
@@ -2526,7 +3147,7 @@
     const suspiciousTitlePatterns = ['hacked','deface','pwned','owned','cracked','by ','hack','breach','security compromised','cyber attack'];
     for (const pat of suspiciousTitlePatterns) {
       if (titleLower.includes(pat) && !titleLower.includes('prevent') && !titleLower.includes('protect')) {
-        chrome.runtime.sendMessage({ type: 'incrementBlocked', category: 'malware', count: 1 });
+        _b.runtime.sendMessage({ type: MSG.INCREMENT_BLOCKED, category: 'malware', count: 1 });
         showWarning('Possible site defacement detected! This page may have been compromised. Title contains: "' + document.title + '"');
         break;
       }
@@ -2537,6 +3158,10 @@
   function detectPhoneScams() {
     if (config.phoneScamDetect !== true) return;
     const bodyText = document.body ? document.body.innerText.toLowerCase() : '';
+    const urlLower = (window.location.href || '').toLowerCase();
+    if (/(support|help|kb\.|knowledgebase|docs\.|learn\.|community\.|blog\.|status\.)/i.test(urlLower)) return;
+    const metaDesc = document.querySelector('meta[name="description"], meta[property="og:description"]');
+    if (metaDesc && /(product support|help center|knowledge base|documentation|tutorial|blog post|technical (support|article))/i.test(metaDesc.getAttribute('content') || '')) return;
     const scamPatterns = [
       'call now','call this number','call immediately','call customer care',
       'call toll free','call 24/7','act now','limited time offer','you have won',
@@ -2549,8 +3174,26 @@
     ];
     const found = scamPatterns.filter(s => bodyText.includes(s));
     if (found.length > 2) {
-      chrome.runtime.sendMessage({ type: 'incrementBlocked', category: 'malware', count: 1 });
+      _b.runtime.sendMessage({ type: MSG.INCREMENT_BLOCKED, category: 'malware', count: 1 });
       showWarning('Potential phone scam detected! This page uses common scam tactics. Do not call any numbers listed.');
+    }
+  }
+
+  /* ---------- Scareware Detection ---------- */
+  function detectScareware() {
+    const bodyText = document.body ? document.body.innerText.toLowerCase() : '';
+    const scarePatterns = [
+      'antivirus is off', 'your antivirus is off', 'antivirus expired', 'renew your subscription',
+      'subscription has expired', 'your computer is infected', 'your pc is infected',
+      'your system is infected', 'your computer has been blocked', 'your account has been blocked',
+      'your account is suspended', 'click to renew', 'renew now', 'activate now',
+      'your license has expired', 'your security is at risk', 'your system is at risk',
+      'virus detected', 'threats detected', 'security alert', 'critical alert',
+    ];
+    const found = scarePatterns.filter(s => bodyText.includes(s));
+    if (found.length > 1) {
+      _b.runtime.sendMessage({ type: MSG.INCREMENT_BLOCKED, category: 'malware', count: 1 });
+      showWarning('Scareware detected! This page is using fake security warnings to trick you. Do not click anything.');
     }
   }
 
@@ -2567,11 +3210,11 @@
         '[data-testid="banner"], [data-testid*="premium"]'
       );
       for (const el of spotifyAds) {
-        if (el.offsetParent !== null) { el.style.setProperty('display', 'none', 'important'); count++; }
+        if (el.offsetParent !== null) { el.classList.add('ds-hidden'); count++; }
       }
       const adSlots = document.querySelectorAll('div[role="banner"][class*=""], section[class*="ad"]');
       for (const el of adSlots) {
-        if (el.offsetParent !== null) { el.style.setProperty('display', 'none', 'important'); count++; }
+        if (el.offsetParent !== null) { el.classList.add('ds-hidden'); count++; }
       }
     }
     if (host === 'crunchyroll.com' || host.endsWith('.crunchyroll.com')) {
@@ -2581,7 +3224,7 @@
         '.ad-overlay, .ad-unit, [data-testid*="ad"]'
       );
       for (const el of crAds) {
-        if (el.offsetParent !== null) { el.style.setProperty('display', 'none', 'important'); count++; }
+        if (el.offsetParent !== null) { el.classList.add('ds-hidden'); count++; }
       }
     }
     if (host === 'music.youtube.com' || host.endsWith('.music.youtube.com')) {
@@ -2590,7 +3233,7 @@
         '[aria-label*="ad"], [aria-label*="Ad"]'
       );
       for (const el of ytMusicAds) {
-        if (el.offsetParent !== null) { el.style.setProperty('display', 'none', 'important'); count++; }
+        if (el.offsetParent !== null) { el.classList.add('ds-hidden'); count++; }
       }
     }
     if (host === 'soundcloud.com' || host.endsWith('.soundcloud.com')) {
@@ -2599,7 +3242,7 @@
         '[class*="advertisement"], [class*="promoted"], [class*="sponsored"]'
       );
       for (const el of scAds) {
-        if (el.offsetParent !== null) { el.style.setProperty('display', 'none', 'important'); count++; }
+        if (el.offsetParent !== null) { el.classList.add('ds-hidden'); count++; }
       }
     }
     if (count > 0) { queueBlockCount(count); removeAdPlaceholders(); }
@@ -2608,22 +3251,24 @@
   /* ---------- Phishing Link Detection ---------- */
   function detectPhishingLinks() {
     if (config.phishingLinkDetect !== true) return;
+    /* Skip extension internal pages — they link to legitimate external resources */
+    if (window.location.protocol === 'moz-extension:' || window.location.protocol === 'chrome-extension:') return;
     const host = hostname();
     const brandPatterns = [
-      { pattern: /go0+gle/i, label: 'Google' },
-      { pattern: /facebo0+k/i, label: 'Facebook' },
-      { pattern: /y0utube|youtu[e3]e/i, label: 'YouTube' },
-      { pattern: /ama[sz]on/i, label: 'Amazon' },
-      { pattern: /micr0s0ft|micr0$0ft|micr0soft/i, label: 'Microsoft' },
-      { pattern: /app[e3]e\b/i, label: 'Apple' },
-      { pattern: /paypa[l1]/i, label: 'PayPal' },
-      { pattern: /instagra[mrn]/i, label: 'Instagram' },
-      { pattern: /twi[t+]e?r|twltter|twiiter/i, label: 'Twitter/X' },
-      { pattern: /netfli[xk]/i, label: 'Netflix' },
-      { pattern: /whatsappp/i, label: 'WhatsApp' },
-      { pattern: /telegra[mrn]/i, label: 'Telegram' },
-      { pattern: /githu[b6]/i, label: 'GitHub' },
-      { pattern: /linke[d9]in|linked1n/i, label: 'LinkedIn' },
+      { pattern: /go0+gle/i, label: 'Google', safe: ['google.com', 'googleapis.com'] },
+      { pattern: /facebo0+k/i, label: 'Facebook', safe: ['facebook.com', 'fbcdn.net'] },
+      { pattern: /y0utube|youtu[e3]e/i, label: 'YouTube', safe: ['youtube.com', 'ytimg.com'] },
+      { pattern: /ama[sz]on/i, label: 'Amazon', safe: ['amazon.com', 'amazonaws.com', 'amazonservices.com'] },
+      { pattern: /micr0s0ft|micr0$0ft|micr0soft/i, label: 'Microsoft', safe: ['microsoft.com', 'live.com', 'microsoftonline.com'] },
+      { pattern: /app[e3]e\b/i, label: 'Apple', safe: ['apple.com'] },
+      { pattern: /paypa[l1]/i, label: 'PayPal', safe: ['paypal.com', 'paypal.me', 'paypalobjects.com'] },
+      { pattern: /instagra[mrn]/i, label: 'Instagram', safe: ['instagram.com', 'cdninstagram.com'] },
+      { pattern: /twi[t+]e?r|twltter|twiiter/i, label: 'Twitter/X', safe: ['twitter.com', 'twimg.com', 'x.com'] },
+      { pattern: /netfli[xk]/i, label: 'Netflix', safe: ['netflix.com', 'nflximg.net'] },
+      { pattern: /whatsappp/i, label: 'WhatsApp', safe: ['whatsapp.com'] },
+      { pattern: /telegra[mrn]/i, label: 'Telegram', safe: ['telegram.org', 't.me'] },
+      { pattern: /githu[b6]/i, label: 'GitHub', safe: ['github.com', 'githubusercontent.com'] },
+      { pattern: /linke[d9]in|linked1n/i, label: 'LinkedIn', safe: ['linkedin.com', 'licdn.com'] },
     ];
     const phishingKeywords = ['login', 'signin', 'verify', 'secure', 'account', 'update', 'confirm', 'banking', 'password', 'credential'];
     const urlShorteners = ['bit.ly', 'tinyurl.com', 'tiny.cc', 't.co', 'goo.gl', 'shorturl.at', 'ow.ly', 'is.gd', 'buff.ly', 'cli.gs', 'rb.gy', 'bl.ink', 'short.link', 'cutt.ly'];
@@ -2644,6 +3289,7 @@
         }
         for (const bp of brandPatterns) {
           if (bp.pattern.test(parsed.hostname) && !parsed.hostname.includes(host)) {
+            if (bp.safe && bp.safe.some(function(d) { return parsed.hostname === d || parsed.hostname.endsWith('.' + d); })) continue;
             reasons.push('Brand impersonation: ' + bp.label + ' (' + parsed.hostname + ')');
           }
         }
@@ -2658,19 +3304,24 @@
             link.dataset.dsPhishWarned = 'true';
             link.dataset.dsPhishReasons = reasons.join('; ');
             const origClick = link.onclick;
-            link.addEventListener('click', function(e) {
+            link.addEventListener('click', async function(e) {
               if (config.phishingLinkDetect !== true) return;
               e.preventDefault();
               e.stopPropagation();
               queueBlockCount(1);
-              showWarning('Suspicious link detected! This may be a phishing attempt.\n' + this.dataset.dsPhishReasons + '\n\nURL: ' + this.href);
+              const href = this.href;
+              const confirmed = await showConfirmModal(
+                'DurgaShield detected a possible phishing link.\n' +
+                this.dataset.dsPhishReasons + '\n\nURL: ' + href + '\n\nOpen anyway?'
+              );
+              if (confirmed) { window.location.href = href; }
             });
           }
         }
       } catch (e) {}
     }
     if (suspiciousLinks.length > 0) {
-      chrome.runtime.sendMessage({ type: 'incrementBlocked', category: 'phishing', count: suspiciousLinks.length });
+      _b.runtime.sendMessage({ type: MSG.INCREMENT_BLOCKED, category: 'phishing', count: suspiciousLinks.length });
     }
   }
 
@@ -2683,17 +3334,17 @@
       const seenIndicators = document.querySelectorAll('[aria-label*="Seen"], [aria-label*="seen"], [data-testid*="typing"], [class*="typing"], [data-testid*="seen"]');
       for (const el of seenIndicators) { el.style.setProperty('display', 'none', 'important'); }
       const readTicks = document.querySelectorAll('[data-visualcompletion="ignore"] svg circle:last-child, [data-visualcompletion="ignore"] svg image[href*="read"]');
-      for (const el of readTicks) { el.style.setProperty('opacity', '0', 'important'); }
+      for (const el of readTicks) { el.classList.add('ds-opacity-zero'); }
       const activeStatus = document.querySelectorAll('[aria-label*="Active"], [aria-label*="active now"]');
-      for (const el of activeStatus) { el.style.setProperty('display', 'none', 'important'); }
+      for (const el of activeStatus) { el.classList.add('ds-hidden'); }
     }
     if (host.includes('instagram.com')) {
       const seenIndicators = document.querySelectorAll('[aria-label*="Seen"], [aria-label*="seen"], [class*="seen"]');
-      for (const el of seenIndicators) { el.style.setProperty('display', 'none', 'important'); }
+      for (const el of seenIndicators) { el.classList.add('ds-hidden'); }
       const typingIndicators = document.querySelectorAll('[class*="typing"], [class*="typing-indicator"], [data-testid*="typing"]');
-      for (const el of typingIndicators) { el.style.setProperty('display', 'none', 'important'); }
+      for (const el of typingIndicators) { el.classList.add('ds-hidden'); }
       const activityStatus = document.querySelectorAll('[aria-label*="Active"], [aria-label*="active now"], [class*="active-status"]');
-      for (const el of activityStatus) { el.style.setProperty('display', 'none', 'important'); }
+      for (const el of activityStatus) { el.classList.add('ds-hidden'); }
     }
   }
 
